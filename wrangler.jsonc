@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "realityos",
+  "main": "dist/worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "realityos", "database_id": "local-dev-only-not-deployed" }
+  ],
+  "vars": {
+    "FREEBUFF_CLIENT_ID": "84de8b4e-1988-4f88-a8f2-f202418abbe4",
+    "FREEBUFF_ISSUER": "https://freebuff.com/oidc",
+    "APP_ORIGIN": "http://localhost:8787",
+    "AI_PROVIDER": "auto"
+  },
+  "observability": { "enabled": true }
+}

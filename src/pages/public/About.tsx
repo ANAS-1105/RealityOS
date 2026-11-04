@@ -1,33 +1,29 @@
 import { motion } from 'motion/react'
-import { Compass, Eye, GitCompareArrows, LineChart, Sparkles } from 'lucide-react'
-import { ButtonLink } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
+import { Compass, Eye, FileDown, FileText, GitCompareArrows, LineChart, Sparkles } from 'lucide-react'
+import { ButtonAnchor, ButtonLink } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
 const PHILOSOPHY = [
-  { icon: Eye, label: 'Understand', body: 'Make the situation explicit before suggesting anything.' },
-  { icon: LineChart, label: 'Simulate', body: 'Turn plans into testable projections rather than opinions.' },
-  { icon: GitCompareArrows, label: 'Compare', body: 'Show trade-offs side by side, including what each option costs.' },
-  { icon: Compass, label: 'Decide', body: 'Recommend clearly, and show the argument behind the recommendation.' },
-  { icon: Sparkles, label: 'Learn', body: 'Score the prediction against reality and adjust the next one.' },
+  { icon: Eye, label: 'Understand', body: 'Make the situation explicit first.' },
+  { icon: LineChart, label: 'Simulate', body: 'Turn plans into testable projections.' },
+  { icon: GitCompareArrows, label: 'Compare', body: 'Show trade-offs side by side.' },
+  { icon: Compass, label: 'Decide', body: 'Recommend clearly, and say why.' },
+  { icon: Sparkles, label: 'Learn', body: 'Score the prediction against reality.' },
 ]
 
 export default function About() {
   return (
-    <div className="mx-auto w-full max-w-4xl px-5 py-14 sm:px-8 sm:py-20">
+    <div className="mx-auto w-full max-w-none px-5 py-16 sm:px-8 sm:py-20 lg:px-10">
       <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Badge tone="accent">About RealityOS</Badge>
-        <h1 className="mt-5 text-[2rem] leading-tight sm:text-[2.5rem]">Decision-making, redesigned for uncertainty.</h1>
-        <p className="mt-5 max-w-2xl text-[0.95rem] leading-relaxed text-mist-400">
-          Most decision tools help you organise what you already decided. RealityOS is built for the harder question: what is likely to happen
-          after you choose? It answers with a model of your situation, a projection for each path, and — after the fact — an honest comparison
-          between what it predicted and what you actually lived.
+        <h1 className="text-[2rem] leading-tight sm:text-[2.5rem]">Built for the question after the decision.</h1>
+        <p className="mt-5 max-w-2xl text-[1rem] leading-relaxed text-mist-400">
+          Most tools organise what you already decided. RealityOS projects what happens next — and later compares that projection with what
+          you actually lived.
         </p>
       </motion.header>
 
       <section className="mt-14">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-mist-500">The philosophy</h2>
-        <ol className="mt-5 grid gap-3 sm:grid-cols-5">
+        <ol className="grid gap-4 sm:grid-cols-5">
           {PHILOSOPHY.map((step, index) => (
             <motion.li
               key={step.label}
@@ -36,34 +32,71 @@ export default function About() {
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: index * 0.06 }}
             >
-              <Card className="h-full p-4" interactive>
-                <step.icon aria-hidden className="h-4 w-4 text-accent-300" />
-                <p className="mt-3 text-[0.88rem] font-medium text-mist-50">{step.label}</p>
-                <p className="mt-1.5 text-[0.78rem] leading-relaxed text-mist-400">{step.body}</p>
+              <Card className="h-full p-5" interactive>
+                <step.icon aria-hidden className="h-4 w-4 text-accent-400" />
+                <p className="mt-3 text-[0.9rem] font-medium text-mist-100">{step.label}</p>
+                <p className="mt-1.5 text-[0.8rem] leading-relaxed text-mist-400">{step.body}</p>
               </Card>
             </motion.li>
           ))}
         </ol>
       </section>
 
-      <section className="mt-14 grid gap-4 sm:grid-cols-2">
-        <Card className="p-5">
-          <h2 className="text-[0.95rem] font-medium text-mist-50">What RealityOS will not do</h2>
-          <ul className="mt-3 space-y-2 text-[0.85rem] leading-relaxed text-mist-400">
-            <li>• Pretend a simulation is a guarantee. Every projection is an estimate with an attached uncertainty.</li>
-            <li>• Let a language model invent your probabilities. Numbers come from a trained, explainable model.</li>
-            <li>• Tell you what to want. It compares the options you can actually execute.</li>
-            <li>• Sell your data. Your simulations are scoped to your account and deletable in one click.</li>
+      <section className="mt-14 grid gap-5 sm:grid-cols-2">
+        <Card className="p-6">
+          <h2 className="text-[0.95rem] font-medium text-mist-100">What RealityOS won&apos;t do</h2>
+          <ul className="mt-4 space-y-2.5 text-[0.88rem] leading-relaxed text-mist-400">
+            <li>Pretend a projection is a guarantee.</li>
+            <li>Let a language model invent your probabilities.</li>
+            <li>Tell you what to want.</li>
+            <li>Sell your data.</li>
           </ul>
         </Card>
-        <Card className="p-5">
-          <h2 className="text-[0.95rem] font-medium text-mist-50">Who it is for</h2>
-          <ul className="mt-3 space-y-2 text-[0.85rem] leading-relaxed text-mist-400">
-            <li>• Students balancing coursework, exams and a project that decides their grade.</li>
-            <li>• Professionals juggling a shipping date, a review cycle and a family calendar.</li>
-            <li>• Founders choosing between two versions of the same limited week.</li>
-            <li>• Anyone whose plan has more moving parts than a to-do list can carry.</li>
+        <Card className="p-6">
+          <h2 className="text-[0.95rem] font-medium text-mist-100">Who it&apos;s for</h2>
+          <ul className="mt-4 space-y-2.5 text-[0.88rem] leading-relaxed text-mist-400">
+            <li>Students balancing coursework and a graded project.</li>
+            <li>Professionals juggling a ship date and a review cycle.</li>
+            <li>Anyone whose plan outgrew a to-do list.</li>
           </ul>
+        </Card>
+      </section>
+
+
+      <section className="mt-14">
+        <Card className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-accent-400">Documentation</p>
+              <h2 className="mt-2 text-[1.15rem] font-medium text-mist-50">How RealityOS is built, end to end</h2>
+              <p className="mt-3 text-[0.9rem] leading-relaxed text-mist-400">
+                A complete technical write-up of the whole application: the product loop, the full frontend
+                (routing, pages, components, data flow) and the backend (Worker pipeline, API reference,
+                database schema, AI agents, deterministic engine and ML model, security posture).
+              </p>
+              <p className="mt-3 text-[0.78rem] text-mist-500">PDF · 21 pages · v1.0.0 · model simulated-cohort-v1</p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-3 sm:items-stretch">
+              <ButtonAnchor
+                href="/RealityOS-Project-Documentation.pdf"
+                download="RealityOS-Project-Documentation.pdf"
+                size="lg"
+                magnetic
+                icon={<FileDown aria-hidden className="h-4 w-4" />}
+              >
+                Download documentation
+              </ButtonAnchor>
+              <ButtonAnchor
+                href="/RealityOS-Project-Documentation.pdf"
+                target="_blank"
+                variant="secondary"
+                size="md"
+                icon={<FileText aria-hidden className="h-4 w-4" />}
+              >
+                Read in browser
+              </ButtonAnchor>
+            </div>
+          </div>
         </Card>
       </section>
 
@@ -72,7 +105,7 @@ export default function About() {
           Try it on a real decision
         </ButtonLink>
         <ButtonLink to="/privacy" size="lg" variant="secondary">
-          Read the privacy notes
+          Privacy notes
         </ButtonLink>
       </div>
     </div>

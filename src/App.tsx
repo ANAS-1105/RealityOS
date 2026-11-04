@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AmbientBackground } from '@/components/ambient/AmbientBackground'
-import { CursorGlow } from '@/components/ambient/CursorGlow'
 import { AppShell } from '@/components/layout/AppShell'
 import { Footer } from '@/components/layout/Footer'
 import { Navbar } from '@/components/layout/Navbar'
@@ -9,8 +8,8 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { Spinner } from '@/components/ui/Feedback'
 import { ButtonLink } from '@/components/ui/Button'
 import { SessionProvider, useSession } from '@/lib/session'
+import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary'
 
-/* Marketing pages are eagerly useful; the app and its charts load on demand. */
 const Landing = lazy(() => import('@/pages/public/Landing'))
 const HowItWorks = lazy(() => import('@/pages/public/HowItWorks'))
 const Features = lazy(() => import('@/pages/public/Features'))
@@ -19,6 +18,7 @@ const Privacy = lazy(() => import('@/pages/public/Privacy'))
 const Login = lazy(() => import('@/pages/public/Login'))
 const SignUp = lazy(() => import('@/pages/public/SignUp'))
 const ForgotPassword = lazy(() => import('@/pages/public/ForgotPassword'))
+const SignOut = lazy(() => import('@/pages/public/SignOut'))
 const NotFound = lazy(() => import('@/pages/public/NotFound'))
 
 const Dashboard = lazy(() => import('@/pages/app/Dashboard'))
@@ -32,8 +32,26 @@ const Onboarding = lazy(() => import('@/pages/app/Onboarding'))
 function ScrollToTop() {
   const location = useLocation()
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [location.pathname])
+    if (!location.hash) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      return
+    }
+    // Deep links such as /features#model render behind a lazy Suspense chunk,
+    // so the target may not exist on the first frame: poll briefly for it.
+    const id = decodeURIComponent(location.hash.slice(1))
+    let frame = 0
+    let handle = 0
+    const attempt = () => {
+      const target = document.getElementById(id)
+      if (target) {
+        target.scrollIntoView({ behavior: 'auto', block: 'start' })
+        return
+      }
+      if (frame++ < 60) handle = requestAnimationFrame(attempt)
+    }
+    handle = requestAnimationFrame(attempt)
+    return () => cancelAnimationFrame(handle)
+  }, [location.pathname, location.hash])
   return null
 }
 
@@ -50,11 +68,7 @@ function MarketingLayout() {
   )
 }
 
-/**
- * Route guard. It never redirects mid-flight: signed-out visitors see a short
- * explanation and a sign-in call to action, which avoids redirect loops and keeps
- * the app's public pages reachable.
- */
+/** Route guard — never redirects mid-flight. */
 function RequireAuth() {
   const { signedIn, loading } = useSession()
   const location = useLocation()
@@ -75,12 +89,8 @@ function RequireAuth() {
           RealityOS keeps every simulation private to your account and calibrates the workload model on your own recorded outcomes.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <ButtonLink to="/login" size="md" magnetic>
-            Sign in
-          </ButtonLink>
-          <ButtonLink to="/signup" variant="secondary" size="md">
-            Create an account
-          </ButtonLink>
+          <ButtonLink to="/login" size="md" magnetic>Sign in</ButtonLink>
+          <ButtonLink to="/signup" variant="secondary" size="md">Create an account</ButtonLink>
         </div>
         <p className="mt-4 text-[0.78rem] text-mist-500">
           You were heading to <span className="text-mist-300">{location.pathname}</span>.
@@ -111,6 +121,7 @@ function Router() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/signout" element={<SignOut />} />
         </Route>
 
         <Route path="/onboarding" element={<Onboarding />} />
@@ -144,11 +155,12 @@ export function App() {
           Skip to content
         </a>
         <AmbientBackground />
-        <CursorGlow />
         <ScrollToTop />
-        <div id="main">
-          <Router />
-        </div>
+        <AppErrorBoundary>
+          <main className="relative z-10">
+            <Router />
+          </main>
+        </AppErrorBoundary>
       </ToastProvider>
     </SessionProvider>
   )

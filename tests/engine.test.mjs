@@ -109,6 +109,42 @@ test('what-if returns metric deltas and a deterministic explanation', () => {
   assert.equal(base.optionId, options[0].id)
 })
 
+test('every what-if lever the UI exposes actually changes the projection', () => {
+  const { situation, options, context } = demo()
+  const option = options[0]
+  const baseline = whatIf(situation, option, { optionId: option.id, overrides: {} }, context).result.projection
+
+  const shift = (iso, days) => {
+    const date = new Date(`${iso}T00:00:00Z`)
+    date.setUTCDate(date.getUTCDate() + days)
+    return date.toISOString().slice(0, 10)
+  }
+  const tighter = whatIf(
+    situation,
+    option,
+    { optionId: option.id, overrides: { deadline: shift(situation.deadline, -5) } },
+    context,
+  ).result.projection
+  assert.ok(tighter.deadlineRisk >= baseline.deadlineRisk, 'an earlier deadline must not lower deadline risk')
+  assert.ok(tighter.successProbability <= baseline.successProbability, 'an earlier deadline must not raise completion probability')
+
+  const fewerDays = whatIf(
+    situation,
+    option,
+    { optionId: option.id, overrides: { activeDaysPerWeek: 4 } },
+    context,
+  ).result.projection
+  assert.ok(fewerDays.successProbability < baseline.successProbability, 'fewer active days must lower completion probability')
+
+  const simpler = whatIf(
+    situation,
+    option,
+    { optionId: option.id, overrides: { complexity: Math.max(0, situation.complexity * 0.7) } },
+    context,
+  ).result.projection
+  assert.ok(simpler.requiredHours < baseline.requiredHours, 'a lower complexity must reduce the estimated workload')
+})
+
 test('prediction vs reality produces signed gaps and causes', () => {
   const { situation, evaluations } = demo()
   const prediction = buildPrediction(situation, evaluations[0])

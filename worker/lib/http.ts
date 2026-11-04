@@ -73,9 +73,36 @@ export async function readJson<T>(c: Context, schema: ZodType<T>): Promise<T> {
   return parsed.data
 }
 
+/**
+ * Every state-changing call must come from the site itself. During local
+ * development the Vite server proxies `/api` under its own origin, which is not
+ * APP_ORIGIN, so an explicitly configured DEV_ORIGIN is trusted as well.
+ */
+export function isTrustedMutationOrigin(request: Request, env: Env): boolean {
+  if (isSameOriginRequest(request, env.APP_ORIGIN)) return true
+  // DEVELOPMENT ONLY. The Vite dev server proxies /api and forwards the browser
+  // origin with its own scheme (an https preview arrives as http://host), so dev
+  // origins are compared by host. Never set in deployment.
+  const devOrigins = (env.DEV_ORIGIN ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return devOrigins.some((origin) => isSameOriginRequest(request, origin) || sameHost(request, origin))
+}
+
+function sameHost(request: Request, candidate: string): boolean {
+  const header = request.headers.get('origin')
+  if (!header || header === 'null') return false
+  try {
+    return new URL(header).host === new URL(candidate).host
+  } catch {
+    return false
+  }
+}
+
 /** Every state-changing call must be same-origin (see @freebuff/auth docs). */
 export function assertSameOrigin(c: Context<{ Bindings: Env; Variables: Vars }>): void {
-  if (!isSameOriginRequest(c.req.raw, c.env.APP_ORIGIN)) throw forbidden()
+  if (!isTrustedMutationOrigin(c.req.raw, c.env)) throw forbidden()
 }
 
 export interface RateLimitRule {

@@ -55,7 +55,7 @@ export async function ensureUser(
       `INSERT INTO users (sub, email, name, picture, created_at, updated_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?5)
        ON CONFLICT(sub) DO UPDATE SET
-         email = COALESCE(excluded.email, users.email),
+         email = CASE WHEN users.email_edited = 1 THEN users.email ELSE COALESCE(excluded.email, users.email) END,
          name = COALESCE(excluded.name, users.name),
          picture = COALESCE(excluded.picture, users.picture),
          updated_at = ?5`,
@@ -82,6 +82,45 @@ export async function ensureUser(
       updated_at: timestamp,
     }
   )
+}
+
+export interface AccountRow {
+  sub: string
+  email: string | null
+  name: string | null
+  picture: string | null
+  auth_provider: string
+  password_hash: string | null
+}
+
+export function getAccount(db: D1Database, sub: string): Promise<AccountRow | null> {
+  return db
+    .prepare(`SELECT sub, email, name, picture, auth_provider, password_hash FROM users WHERE sub = ?1`)
+    .bind(sub)
+    .first<AccountRow>()
+}
+
+/** Edits made in Settings. Changing the email marks it user-owned. */
+export async function updateAccount(
+  db: D1Database,
+  sub: string,
+  input: { name?: string; email?: string },
+): Promise<AccountRow> {
+  const timestamp = now()
+  await db
+    .prepare(
+      `UPDATE users SET
+         name = COALESCE(?2, name),
+         email = COALESCE(?3, email),
+         email_edited = CASE WHEN ?3 IS NULL THEN email_edited ELSE 1 END,
+         updated_at = ?4
+       WHERE sub = ?1`,
+    )
+    .bind(sub, input.name ?? null, input.email ?? null, timestamp)
+    .run()
+  const row = await getAccount(db, sub)
+  if (!row) throw new Error('account disappeared while updating it')
+  return row
 }
 
 export async function setOnboarding(
@@ -483,6 +522,8 @@ export async function deleteAllUserData(db: D1Database, owner: string): Promise<
   for (const table of ['comparisons', 'outcomes', 'predictions', 'training_rows', 'runs', 'situations', 'agent_events', 'simulations']) {
     await db.prepare(`DELETE FROM ${table} WHERE owner = ?1`).bind(owner).run()
   }
+  await db.prepare(`DELETE FROM recovery_codes WHERE sub = ?1`).bind(owner).run()
+  await db.prepare(`DELETE FROM sessions WHERE sub = ?1`).bind(owner).run()
   await db.prepare(`DELETE FROM profiles WHERE sub = ?1`).bind(owner).run()
   await db.prepare(`DELETE FROM users WHERE sub = ?1`).bind(owner).run()
 }

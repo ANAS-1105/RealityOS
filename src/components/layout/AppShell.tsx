@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { BarChart3, History, LayoutDashboard, LogOut, Menu, Plus, Settings, UserRound, X } from 'lucide-react'
-import { SignOutButton } from '@freebuff/auth/react'
+import { BarChart3, History, LayoutDashboard, LogOut, Menu, Plus, Settings, Sun, UserRound, X, Moon } from 'lucide-react'
 import { useScrollLock } from '@/lib/hooks'
 import { useSession } from '@/lib/session'
 import { ButtonLink, IconButton } from '@/components/ui/Button'
@@ -15,15 +14,10 @@ const APP_LINKS = [
   { label: 'Settings', to: '/app/settings', icon: Settings },
 ]
 
-/**
- * Authenticated shell. One primary action ("New simulation") is always visible,
- * navigation stays to four items, and the engine badge tells the user which
- * reasoning core produced their results.
- */
+/** Authenticated shell — tight, one primary action always visible, less chrome. */
 export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const location = useLocation()
-  const { user, engine } = useSession()
+  const { user, engine, setTheme, effectiveTheme } = useSession()
   useScrollLock(menuOpen)
 
   const initials = (user?.name ?? user?.email ?? 'You')
@@ -32,10 +26,19 @@ export function AppShell() {
     .map((part) => part.charAt(0).toUpperCase())
     .join('')
 
+  const ThemeToggle = () => (
+    <IconButton
+      label={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} theme`}
+      onClick={() => setTheme(effectiveTheme === 'light' ? 'dark' : 'light')}
+    >
+      {effectiveTheme === 'light' ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />}
+    </IconButton>
+  )
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 border-b border-ink-800/70 bg-ink-950/78 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
+        <div className="mx-auto flex h-15 w-full max-w-none items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Logo to="/app/dashboard" />
 
           <nav aria-label="App" className="ml-4 hidden items-center gap-1 lg:flex">
@@ -65,6 +68,7 @@ export function AppShell() {
                 {engine.mode === 'ai' ? `Agents · ${engine.model}` : 'Reliability core · local'}
               </span>
             ) : null}
+            <ThemeToggle />
             <ButtonLink to="/app/new" size="sm" icon={<Plus aria-hidden className="h-4 w-4" />} magnetic className="hidden sm:inline-flex">
               New simulation
             </ButtonLink>
@@ -86,7 +90,7 @@ export function AppShell() {
             transition={{ duration: 0.18 }}
             className="border-t border-ink-800/70 bg-ink-950/96 px-4 pb-5 pt-3 backdrop-blur-xl sm:px-6"
           >
-            <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="mx-auto grid w-full max-w-none gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
               <div>
                 <p className="text-[0.72rem] uppercase tracking-[0.14em] text-mist-500">Signed in as {user?.name ?? 'you'}</p>
                 <p className="mt-1 text-sm text-mist-300">{user?.email ?? 'Freebuff account'}</p>
@@ -117,6 +121,7 @@ export function AppShell() {
                 </nav>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <ThemeToggle />
                 <NavLink
                   to="/app/settings"
                   onClick={() => setMenuOpen(false)}
@@ -125,20 +130,21 @@ export function AppShell() {
                   <UserRound aria-hidden className="h-4 w-4" />
                   Profile & privacy
                 </NavLink>
-                <SignOutButton
-                  returnTo={location.pathname.startsWith('/app') ? '/' : location.pathname}
+                <Link
+                  to="/signout"
+                  onClick={() => setMenuOpen(false)}
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-ink-700/70 bg-ink-900/60 px-3 text-sm text-mist-200 hover:text-mist-50"
                 >
                   <LogOut aria-hidden className="h-4 w-4" />
                   Sign out
-                </SignOutButton>
+                </Link>
               </div>
             </div>
           </motion.div>
         ) : null}
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
+      <main id="main" className="mx-auto w-full max-w-none px-4 pb-16 pt-5 sm:px-6 sm:pt-7 lg:px-8">
         <Outlet />
       </main>
     </div>

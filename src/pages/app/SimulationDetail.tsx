@@ -308,7 +308,7 @@ export default function SimulationDetail() {
         ) : busy ? null : (
           <EmptyState
             title="No situation model yet"
-            description="RealityOS has the description but has not structured it. Run the analysis to extract the goal, deadline, hours, constraints and dependencies."
+            description="Run the analysis to structure this situation."
             action={
               <Button onClick={analyze} loading={busy === 'analyzing'} magnetic icon={<RefreshCw aria-hidden className="h-4 w-4" />}>
                 Analyze situation
@@ -337,7 +337,7 @@ export default function SimulationDetail() {
             </div>
           ) : null}
 
-          <Section title="Decision options" sub="Each plan is a different strategy, projected by the trained workload model.">
+          <Section title="Decision options" sub="Different strategies, projected by the model.">
             <div className="grid gap-5 pt-2 lg:grid-cols-3">
               {run.evaluations.map((evaluation, index) => (
                 <DecisionCard
@@ -364,7 +364,7 @@ export default function SimulationDetail() {
             </div>
           </Section>
 
-          <Section title="Comparison" sub="Only the metrics that change the decision.">
+          <Section title="Comparison" sub="Only what changes the decision.">
             <ComparisonPanel
               evaluations={run.evaluations}
               onExplore={(optionId) => {
@@ -374,7 +374,7 @@ export default function SimulationDetail() {
             />
           </Section>
 
-          <Section title="Recommendation" sub="Ranked by a published scoring function, explained in words.">
+          <Section title="Recommendation" sub="Ranked, with the reasoning.">
             <RecommendationPanel
               recommendation={run.recommendation}
               optionCode={run.evaluations.find((e) => e.option.id === run.recommendation.optionId)?.option.code ?? 'A'}
@@ -384,7 +384,7 @@ export default function SimulationDetail() {
           </Section>
 
           {run.risks.length ? (
-            <Section title="Risk register" sub="Combined from the situation model, the engine and the risk agent.">
+            <Section title="Risk register" sub="From the situation, the engine and the risk agent.">
               <ul className="grid gap-3 sm:grid-cols-2">
                 {run.risks.map((risk) => (
                   <li key={risk.label} className="surface rounded-xl px-4 py-3.5">
@@ -432,7 +432,7 @@ export default function SimulationDetail() {
         ) : (
           <EmptyState
             title="No outcome recorded yet"
-            description="Once the deadline has passed, record what actually happened. RealityOS scores its own prediction, explains the gap and calibrates your next simulation on it."
+            description="After the deadline, record what actually happened."
             action={
               <Button onClick={() => setOutcomeOpen(true)} magnetic icon={<ClipboardCheck aria-hidden className="h-4 w-4" />}>
                 Record outcome
@@ -461,7 +461,7 @@ export default function SimulationDetail() {
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         title="Delete this simulation?"
-        description="The situation model, runs, predictions and any recorded outcome are removed permanently."
+        description="This removes the simulation and its outcome permanently."
         size="sm"
         footer={
           <>

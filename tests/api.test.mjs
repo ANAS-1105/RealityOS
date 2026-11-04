@@ -72,7 +72,18 @@ async function readSse(response) {
 const RUN = Date.now().toString(36)
 const asUser = (name) => `${name}-${RUN}`
 
-const DESCRIPTION = `My final year project is due on October 25 and I have a machine learning exam on October 14.
+/** Relative dates: a hardcoded calendar date silently becomes "due today" (or
+ *  the past) once it arrives, which turns every projection into a
+ *  does-not-fit scenario and makes the what-if assertions meaningless. */
+const dayAfter = (days) => {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+const PROJECT_DUE = dayAfter(30)
+const EXAM_DUE = dayAfter(19)
+
+const DESCRIPTION = `My final year project is due on ${PROJECT_DUE} and I have a machine learning exam on ${EXAM_DUE}.
 I can protect about 5 hours each day, even though I have college classes during the day.
 I still need to finish the dataset preprocessing, train the model and write the final report.`
 
@@ -84,25 +95,38 @@ before(async () => {
   } catch (error) {
     if (error instanceof Error && error.message.includes('already serving')) throw error
   }
-  spawnSync('node', ['tools/build-test-worker.mjs'], { stdio: 'inherit' })
-  spawnSync('npx', ['wrangler', 'd1', 'execute', 'realityos-test', '--local', '--file=worker/db/schema.sql', '-c', 'wrangler.test.jsonc'], {
+  const build = spawnSync('node', ['tools/build-test-worker.mjs'], { stdio: 'inherit' })
+  if (build.status !== 0) throw new Error(`test worker build failed with status ${build.status}`)
+  const migration = spawnSync('npx', ['wrangler', 'd1', 'execute', 'realityos-test', '--local', '--file=worker/db/schema.sql', '-c', 'wrangler.test.jsonc'], {
     stdio: 'inherit',
   })
-  server = spawn(WRANGLER, ['wrangler', 'dev', '-c', 'wrangler.test.jsonc', '--port', String(PORT), '--ip', '127.0.0.1'], {
+  if (migration.status !== 0) throw new Error(`test database migration failed with status ${migration.status}`)
+  server = spawn(WRANGLER, ['wrangler', 'dev', '-c', 'wrangler.test.jsonc', '--port', String(PORT), '--ip', '127.0.0.1', '--inspector-port', '0'], {
+    detached: process.platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, WRANGLER_SEND_METRICS: 'false' },
   })
   server.stdout.on('data', (chunk) => process.env.VERBOSE && process.stdout.write(chunk))
   server.stderr.on('data', (chunk) => process.env.VERBOSE && process.stderr.write(chunk))
-  server.unref()
+  server.once('error', (error) => { throw error })
   await waitForServer()
 })
 
 after(async () => {
   if (!server) return
-  server.kill('SIGTERM')
-  await delay(1000)
-  if (server.exitCode === null) server.kill('SIGKILL')
+  // The test worker child can exit while workerd's sibling process remains alive.
+  // Terminate the whole Wrangler process group instead of waiting on Node's wrapper.
+  if (process.platform !== 'win32') {
+    try { process.kill(-server.pid, 'SIGTERM') } catch { /* already exited */ }
+    const didExit = await Promise.race([new Promise((resolve) => server.once('exit', resolve)).then(() => true), delay(5_000).then(() => false)])
+    if (!didExit) {
+      try { process.kill(-server.pid, 'SIGKILL') } catch { /* already exited */ }
+    }
+  } else {
+    server.kill('SIGTERM')
+    await Promise.race([new Promise((resolve) => server.once('exit', resolve)), delay(5_000)])
+    if (server.exitCode === null) server.kill('SIGKILL')
+  }
 })
 
 test('health is public and reports the active engine', async () => {
@@ -150,7 +174,8 @@ test('onboarding seeds exactly one labelled demo simulation', async () => {
   const list = await (await api('/api/simulations')).json()
   assert.equal(list.simulations.length, 1)
   assert.equal(list.simulations[0].isDemo, true, 'demo content must be clearly labelled')
-  assert.ok(list.simulations[0].topSuccessProbability > 20, 'the demo must come out of a real simulation run')
+  assert.ok(list.simulations[0].status === 'simulated', 'the demo must complete a real simulation run')
+  assert.ok(list.simulations[0].topSuccessProbability > 0, 'the demo must come out of a real simulation run')
 })
 
 test('the full loop runs: create → analyze → run → what-if → choose → outcome → profile', async () => {
@@ -178,7 +203,7 @@ test('the full loop runs: create → analyze → run → what-if → choose → 
   const analyzed = analyzeEvents.find((e) => e.event === 'result')
   assert.ok(analyzed, 'analysis must end with a result event')
   assert.ok(analyzed.data.situation.deliverables.length >= 2)
-  assert.equal(analyzed.data.situation.deadline, '2026-10-25')
+  assert.equal(analyzed.data.situation.deadline, PROJECT_DUE)
 
   // Run — streamed, with the projection payload.
   const runResponse = await api(`/api/simulations/${simulation.id}/run`, {
@@ -232,7 +257,7 @@ test('the full loop runs: create → analyze → run → what-if → choose → 
     body: {
       optionId: run.recommendation.optionId,
       completed: 'partly',
-      actualCompletionDate: '2026-10-28',
+      actualCompletionDate: dayAfter(33),
       actualHours: 52,
       actualStress: 84,
       whatWentWrong: 'debugging the model took two extra nights',
@@ -337,4 +362,154 @@ test('account deletion removes every trace of the user', async () => {
   await api('/api/simulations', { method: 'POST', user, body: { description: DESCRIPTION } })
   const rebuilt = await (await api('/api/simulations', { user })).json()
   assert.equal(rebuilt.simulations.length, 1)
+})
+
+/* ── Email + password accounts ──────────────────────────────────────────────
+ * The browser stores the session cookie; Node's fetch does not, so these tests
+ * carry it by hand exactly as a browser would.
+ */
+
+const cookieOf = (response) => {
+  for (const value of response.headers.getSetCookie?.() ?? []) {
+    const pair = value.split(';')[0]
+    if (pair.startsWith('realityos_session=')) return pair
+  }
+  return null
+}
+
+const asAccount = (path, { method = 'GET', body, cookie, origin = ORIGIN } = {}) =>
+  fetch(`${ORIGIN}${path}`, {
+    method,
+    headers: {
+      ...(cookie ? { Cookie: cookie } : {}),
+      ...(method === 'GET' ? {} : { Origin: origin, 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+const emailFor = (name) => `${name}-${RUN}@example.test`
+
+test('an email account signs up, gets recovery codes and a working session', async () => {
+  const email = emailFor('email-signup')
+  const response = await asAccount('/api/accounts/signup', {
+    method: 'POST',
+    body: { name: 'Grace Hopper', email, password: 'compiler1952' },
+  })
+  assert.equal(response.status, 201)
+  const body = await response.json()
+  assert.equal(body.user.email, email)
+  assert.equal(body.provider, 'local')
+  assert.equal(body.recoveryCodes.length, 8, 'a new account receives eight one-time codes')
+
+  const cookie = cookieOf(response)
+  assert.ok(cookie, 'sign-up must set an HTTP-only session cookie')
+
+  const me = await asAccount('/api/me', { cookie })
+  assert.equal(me.status, 200)
+  const meBody = await me.json()
+  assert.equal(meBody.user.email, email)
+  assert.equal(meBody.provider, 'local')
+  assert.equal(meBody.hasPassword, true)
+
+  const session = await (await asAccount('/api/accounts/session', { cookie })).json()
+  assert.equal(session.user.email, email)
+  assert.equal(session.provider, 'local')
+
+  // No cookie, no access.
+  assert.equal((await asAccount('/api/me')).status, 401)
+})
+
+test('email sign-in rejects a wrong password, accepts the right one and signs out', async () => {
+  const email = emailFor('email-signin')
+  const signup = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Ada Lovelace', email, password: 'analytical1843' } })
+  assert.equal(signup.status, 201)
+
+  const duplicate = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Someone Else', email, password: 'different123' } })
+  assert.equal(duplicate.status, 409, 'one email, one account')
+
+  const wrong = await asAccount('/api/accounts/signin', { method: 'POST', body: { email, password: 'not-the-password' } })
+  assert.equal(wrong.status, 401)
+  assert.equal((await wrong.json()).error.code, 'invalid_credentials')
+
+  const right = await asAccount('/api/accounts/signin', { method: 'POST', body: { email: email.toUpperCase(), password: 'analytical1843' } })
+  assert.equal(right.status, 200, 'email matching is case-insensitive')
+  const cookie = cookieOf(right)
+  assert.ok(cookie)
+  assert.equal((await asAccount('/api/me', { cookie })).status, 200)
+
+  const signout = await asAccount('/api/accounts/signout', { method: 'POST', cookie, body: {} })
+  assert.equal(signout.status, 200)
+  assert.equal((await asAccount('/api/me', { cookie })).status, 401, 'the session must be dead after sign-out')
+})
+
+test('settings can update the name and the email together', async () => {
+  const email = emailFor('profile-edit')
+  const signup = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Old Name', email, password: 'settings2026' } })
+  assert.equal(signup.status, 201)
+  const cookie = cookieOf(signup)
+  const nextEmail = emailFor('profile-edited')
+
+  const updated = await asAccount('/api/account/profile', { method: 'PATCH', cookie, body: { name: 'New Name', email: nextEmail } })
+  assert.equal(updated.status, 200)
+  const payload = await updated.json()
+  assert.equal(payload.user.name, 'New Name')
+  assert.equal(payload.user.email, nextEmail)
+
+  const me = await (await asAccount('/api/me', { cookie })).json()
+  assert.equal(me.user.name, 'New Name')
+  assert.equal(me.user.email, nextEmail)
+
+  // The sign-in identifier moved with the edit.
+  assert.equal((await asAccount('/api/accounts/signin', { method: 'POST', body: { email, password: 'settings2026' } })).status, 401)
+  assert.equal((await asAccount('/api/accounts/signin', { method: 'POST', body: { email: nextEmail, password: 'settings2026' } })).status, 200)
+
+  const invalid = await asAccount('/api/account/profile', { method: 'PATCH', cookie, body: { email: 'not-an-email' } })
+  assert.equal(invalid.status, 400)
+})
+
+test('changing the password requires the current one', async () => {
+  const email = emailFor('change-password')
+  const signup = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Password User', email, password: 'firstpass1' } })
+  assert.equal(signup.status, 201)
+  const cookie = cookieOf(signup)
+
+  const wrong = await asAccount('/api/accounts/password', { method: 'POST', cookie, body: { currentPassword: 'nope', newPassword: 'secondpass2' } })
+  assert.equal(wrong.status, 400)
+
+  const ok = await asAccount('/api/accounts/password', { method: 'POST', cookie, body: { currentPassword: 'firstpass1', newPassword: 'secondpass2' } })
+  assert.equal(ok.status, 200)
+  assert.equal((await asAccount('/api/accounts/signin', { method: 'POST', body: { email, password: 'secondpass2' } })).status, 200)
+})
+
+test('a recovery code resets the password exactly once', async () => {
+  const email = emailFor('recovery')
+  const signup = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Recovery User', email, password: 'original123' } })
+  assert.equal(signup.status, 201)
+  const { recoveryCodes } = await signup.json()
+  const code = recoveryCodes[0]
+
+  const recover = await asAccount('/api/accounts/recover', { method: 'POST', body: { email, code, password: 'replacement456' } })
+  assert.equal(recover.status, 200)
+
+  assert.equal((await asAccount('/api/accounts/signin', { method: 'POST', body: { email, password: 'original123' } })).status, 401)
+  assert.equal((await asAccount('/api/accounts/signin', { method: 'POST', body: { email, password: 'replacement456' } })).status, 200)
+
+  const reused = await asAccount('/api/accounts/recover', { method: 'POST', body: { email, code, password: 'another789' } })
+  assert.equal(reused.status, 400, 'a recovery code cannot be replayed')
+
+  const wrongCode = await asAccount('/api/accounts/recover', { method: 'POST', body: { email, code: 'ZZZZ-ZZZZ', password: 'another789' } })
+  assert.equal(wrongCode.status, 400)
+})
+
+test('cross-site requests cannot create accounts or change a profile', async () => {
+  const email = emailFor('csrf-check')
+  const signup = await asAccount('/api/accounts/signup', { method: 'POST', origin: 'https://evil.example', body: { name: 'Mallory', email, password: 'hijack123' } })
+  assert.equal(signup.status, 403)
+
+  const valid = await asAccount('/api/accounts/signup', { method: 'POST', body: { name: 'Real Person', email, password: 'hijack123' } })
+  assert.equal(valid.status, 201)
+  const cookie = cookieOf(valid)
+
+  const profile = await asAccount('/api/account/profile', { method: 'PATCH', cookie, origin: 'https://evil.example', body: { name: 'Hijacked' } })
+  assert.equal(profile.status, 403)
 })

@@ -22,7 +22,7 @@ That loop is the product. Everything below serves it.
 | Area | What was built |
 | --- | --- |
 | Public site | Landing (with a live, real-engine What-If demo), How it works, Features, About, Privacy, Login, Sign up, Account recovery, 404 |
-| Auth | Sign in with Freebuff (OpenID Connect + PKCE, Google/GitHub/Apple). No passwords stored, no secrets in the project, sessions in HTTP-only cookies |
+| Auth | Sign in with Freebuff (OpenID Connect + PKCE, Google/GitHub/Apple) or an email + password account (PBKDF2-SHA256, one-time recovery codes). Sessions are HTTP-only cookies; plain-text passwords are never stored |
 | Onboarding | Name, primary use case, decision style — then one auto-generated, clearly-labelled demo simulation |
 | App | Dashboard, Create simulation (text + voice + file upload + optional structured hints), Situation analysis (editable), Simulation results, Decision comparison, Recommendation, What-If simulator, Decision history, Prediction vs reality, Personal decision profile, Settings |
 | Backend | One Cloudflare Worker (Hono) serving the API and the SPA, with D1 persistence, rate limiting, same-origin enforcement and per-user authorization on every query |
@@ -112,8 +112,11 @@ browser.
 ## Tests
 
 * `tests/engine.test.mjs` — extraction (dates, hours, deliverables), determinism, monotonicity,
-  scoring weights, What-If direction, prediction-vs-reality maths (11 tests)
+  scoring weights, What-If direction and lever mapping, prediction-vs-reality maths (12 tests)
 * `tests/agents.test.mjs` — LLM branch with a mock provider: normalization, hallucination rejection,
   schema-violation fallback, engine-mode honesty, stage events (6 tests)
 * `tests/api.test.mjs` — real workerd + real D1: 401s, cross-site 403s, two-account isolation, the
   full create → analyze → run → what-if → choose → outcome → profile loop (9 tests)
+
+33 tests in total. See [`docs/PROJECT-DOCUMENTATION.md`](docs/PROJECT-DOCUMENTATION.md) for the
+complete project documentation (architecture, API reference, data model, requirements, test cases).

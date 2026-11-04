@@ -613,6 +613,27 @@ export function critiqueLocally(evaluations: OptionEvaluation[]): CritiqueChalle
       })
     }
   }
+
+  // No plan is assumption-free. When nothing crossed a hard threshold above,
+  // challenge the tightest assumption each remaining plan is still making (its
+  // worst-covered deliverable and the buffer left if that estimate is optimistic)
+  // so the Critic never silently returns nothing for a comfortable-looking plan.
+  for (const evaluation of evaluations) {
+    const target = `${evaluation.option.code} — ${evaluation.option.name}`
+    if (challenges.some((challenge) => challenge.target === target)) continue
+    const tightest = [...evaluation.projection.coverage].sort((a, b) => a.ratio - b.ratio)[0]
+    if (!tightest) continue
+    const buffer = evaluation.projection.bufferDays
+    const schedule = `scheduled for ${tightest.scheduled}h against an estimated ${tightest.required}h`
+    challenges.push({
+      target,
+      challenge:
+        buffer < 0
+          ? `Rests on the ${tightest.name} estimate being too pessimistic: it is ${schedule}, and the plan already projects ${Math.abs(buffer)} day(s) past the deadline before anything slips.`
+          : `Rests on the ${tightest.name} estimate holding: it is ${schedule}, and the plan keeps only ${buffer} day(s) of buffer if that work runs long.`,
+      severity: buffer <= 2 ? 'medium' : 'low',
+    })
+  }
   return challenges.slice(0, 5)
 }
 

@@ -71,8 +71,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 /* ── Typed endpoints ───────────────────────────────────────────────────────── */
 
+export interface AccountUser {
+  sub: string
+  name: string | null
+  email: string | null
+  picture: string | null
+}
+
+export type AuthProvider = 'local' | 'freebuff'
+
 export interface MeResponse {
-  user: { sub: string; name: string | null; email: string | null; picture: string | null }
+  user: AccountUser
+  provider: AuthProvider
+  hasPassword: boolean
   profile: { useCase: string | null; decisionStyle: string | null; onboardedAt: string | null; createdAt: string }
   learning: { reliability: number; calibration: { successBias: number; deadlineBias: number; sampleSize: number }; outcomeCount: number }
   counts: { total: number; outcomes: number }
@@ -94,6 +105,31 @@ export interface CreateSimulationPayload {
 
 export const api = {
   me: () => request<MeResponse>('/api/me'),
+  account: {
+    session: () => request<{ user: AccountUser | null; provider: AuthProvider | null }>('/api/accounts/session'),
+    signUp: (body: { name: string; email: string; password: string }) =>
+      request<{ user: AccountUser; provider: AuthProvider; recoveryCodes: string[] }>('/api/accounts/signup', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    signIn: (body: { email: string; password: string }) =>
+      request<{ user: AccountUser; provider: AuthProvider }>('/api/accounts/signin', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    signOut: () => request<{ ok: boolean }>('/api/accounts/signout', { method: 'POST', body: '{}' }),
+    recover: (body: { email: string; code: string; password: string }) =>
+      request<{ ok: boolean }>('/api/accounts/recover', { method: 'POST', body: JSON.stringify(body) }),
+    changePassword: (body: { currentPassword: string; newPassword: string }) =>
+      request<{ ok: boolean }>('/api/accounts/password', { method: 'POST', body: JSON.stringify(body) }),
+    regenerateRecovery: (body: { password: string }) =>
+      request<{ recoveryCodes: string[] }>('/api/accounts/recovery', { method: 'POST', body: JSON.stringify(body) }),
+    updateProfile: (body: { name?: string; email?: string }) =>
+      request<{ user: AccountUser; provider: AuthProvider }>('/api/account/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+  },
   onboarding: (body: { name: string; useCase: string; decisionStyle: string }) =>
     request<{ ok: boolean; demoSimulationId: string | null }>('/api/onboarding', { method: 'POST', body: JSON.stringify(body) }),
   listSimulations: () => request<{ simulations: SimulationSummary[] }>('/api/simulations'),
@@ -130,6 +166,8 @@ export const api = {
       }
       engine: EngineInfo
     }>('/api/profile/model'),
+  trainingExport: () =>
+    request<{ generatedAt: string; modelVersion: number; count: number; rows: unknown[] }>('/api/profile/training-export'),
   seedDemo: () => request<{ demoSimulationId: string | null; simulations: SimulationSummary[] }>('/api/demo', { method: 'POST' }),
   deleteAccount: () => request<{ ok: boolean }>('/api/account/delete', { method: 'POST' }),
   health: () => request<{ ok: boolean; engine: string; model: number }>('/api/health'),

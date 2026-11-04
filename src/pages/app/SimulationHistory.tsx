@@ -54,9 +54,9 @@ export default function SimulationHistory() {
   return (
     <div>
       <PageHeader
-        eyebrow="Decision history"
+        eyebrow="History"
         title="Every decision you have simulated"
-        description="Completed decisions keep their recorded outcome and feed your decision profile."
+        description="Every situation you have modelled."
         actions={
           <ButtonLink to="/app/new" magnetic icon={<Plus aria-hidden className="h-4 w-4" />}>
             New simulation
@@ -127,7 +127,7 @@ export default function SimulationHistory() {
       ) : (
         <EmptyState
           title="No simulations yet"
-          description="Your first decision simulation starts here. Describe a situation and RealityOS will model it, simulate the options and show you the risks."
+          description="Describe a situation and RealityOS will model it."
           action={
             <div className="flex flex-wrap justify-center gap-3">
               <ButtonLink to="/app/new" magnetic icon={<Plus aria-hidden className="h-4 w-4" />}>
@@ -157,7 +157,7 @@ export default function SimulationHistory() {
         open={Boolean(pendingDelete)}
         onClose={() => setPendingDelete(null)}
         title={`Delete “${pendingDelete?.title ?? ''}”?`}
-        description="The situation model, every run, the predictions and any recorded outcome are removed permanently."
+        description="This removes the simulation and its outcome permanently."
         size="sm"
         footer={
           <>

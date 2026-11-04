@@ -25,8 +25,10 @@ import type { OptionEvaluation } from '@/shared/types'
  * Recharts is loaded lazily (see `LazyCharts`) so it never blocks first paint.
  */
 
-const AXIS = { stroke: '#6b769a', fontSize: 11, tickMargin: 8 }
-const GRID = '#1f2942'
+// Colours resolve from the active palette, so the same chart reads correctly on
+// the white interface and on the dark one.
+const AXIS = { stroke: 'var(--color-ink-500)', fontSize: 11, tickMargin: 8 }
+const GRID = 'var(--color-ink-700)'
 const SERIES = ['#6d8bff', '#a78bfa', '#34d399', '#fbbf24']
 
 const TOOLTIP_STYLE = {
@@ -97,8 +99,8 @@ export function ComparisonRadar({ evaluations, className = '' }: { evaluations: 
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} outerRadius="72%">
           <PolarGrid stroke={GRID} />
-          <PolarAngleAxis dataKey="metric" tick={{ fill: '#8c96b5', fontSize: 11 }} />
-          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#5a688c', fontSize: 10 }} stroke={GRID} />
+          <PolarAngleAxis dataKey="metric" tick={{ fill: 'var(--color-mist-500)', fontSize: 11 }} />
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: 'var(--color-mist-500)', fontSize: 10 }} stroke={GRID} />
           {evaluations.map((evaluation, index) => (
             <Radar
               key={evaluation.option.id}
@@ -130,7 +132,7 @@ export function OptionBars({ evaluations, className = '' }: { evaluations: Optio
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} barGap={6} margin={{ top: 8, right: 8, bottom: 4, left: -18 }}>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="name" tick={{ fill: '#8c96b5', fontSize: 11 }} stroke={GRID} interval={0} height={48} angle={0} />
+          <XAxis dataKey="name" tick={{ fill: 'var(--color-mist-500)', fontSize: 11 }} stroke={GRID} interval={0} height={48} angle={0} />
           <YAxis domain={[0, 100]} tick={AXIS} stroke={GRID} />
           <Tooltip content={tooltip('%')} cursor={{ fill: 'rgba(109,139,255,0.06)' }} />
           <Bar dataKey="success" name="Completion" fill="#4a6bff" radius={[6, 6, 0, 0]} animationDuration={650} />
@@ -156,7 +158,7 @@ export function AccuracyTrend({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
           <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: '#8c96b5', fontSize: 11 }} stroke={GRID} />
+          <XAxis dataKey="label" tick={{ fill: 'var(--color-mist-500)', fontSize: 11 }} stroke={GRID} />
           <YAxis domain={[0, 100]} tick={AXIS} stroke={GRID} />
           <Tooltip content={tooltip('%')} />
           <Line type="monotone" dataKey="predicted" name="Simulated" stroke="#6d8bff" strokeWidth={2} dot={{ r: 3, fill: '#6d8bff' }} animationDuration={700} />

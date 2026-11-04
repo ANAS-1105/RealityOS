@@ -407,12 +407,25 @@ export function whatIf(
 
   // Apply the overrides to a copy: the slider drives daily hours, the horizon
   // controls, and an optional focus on a single deliverable.
+  // A complexity change is a scope change, not just a different ML input: scale
+  // each deliverable's complexity so the workload estimate moves with the lever
+  // the What-If panel presents ("trim the complexity").
+  const complexity = input.overrides.complexity
+  const complexityRatio = complexity !== undefined && situation.complexity > 0 ? complexity / situation.complexity : 1
   const adjustedSituation: StructuredSituation = {
     ...situation,
     deadline: input.overrides.deadline !== undefined ? input.overrides.deadline : situation.deadline,
     availableHoursPerDay: input.overrides.availableHoursPerDay ?? situation.availableHoursPerDay,
     activeDaysPerWeek: input.overrides.activeDaysPerWeek ?? situation.activeDaysPerWeek,
-    complexity: input.overrides.complexity ?? situation.complexity,
+    complexity: complexity ?? situation.complexity,
+    ...(complexityRatio !== 1
+      ? {
+          deliverables: situation.deliverables.map((deliverable) => ({
+            ...deliverable,
+            complexity: clamp01(deliverable.complexity * complexityRatio),
+          })),
+        }
+      : {}),
   }
   const totalHours = input.overrides.hoursPerDay ?? option.hoursPerDay
   let allocations = option.allocations

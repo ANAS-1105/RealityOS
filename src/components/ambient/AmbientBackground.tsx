@@ -1,24 +1,23 @@
 import { useEffect, useRef } from 'react'
 import { useHasPointer, useReducedMotion } from '@/lib/hooks'
+import { useSession } from '@/lib/session'
 
 /**
- * Global ambient background — the only page-level motion in the product.
+ * Global ambient background.
  *
- * Three cheap layers, all behind the content and never competing with it:
- *   1. a slowly drifting gradient mesh (CSS, two blurred blobs)
- *   2. a faint grid veil that fades out below the fold
- *   3. a sparse canvas particle field that reacts subtly to the pointer
- *
- * It caps the particle count, pauses when the tab is hidden, drops to a static
- * frame under `prefers-reduced-motion`, and disables pointer interaction on
- * touch devices.
+ * Both palettes use slow, softly blurred color washes for a clean ambient motion.
+ * Dark mode also keeps a tiny particle field. Motion is decorative, ignores pointer
+ * input for interaction, pauses when hidden, and respects reduced-motion settings.
  */
-export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'soft' }) {
+export function AmbientBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reduced = useReducedMotion()
   const hasPointer = useHasPointer()
+  const { effectiveTheme } = useSession()
+  const dark = effectiveTheme === 'dark'
 
   useEffect(() => {
+    if (!dark || reduced) return
     const canvas = canvasRef.current
     if (!canvas) return
     const context = canvas.getContext('2d')
@@ -31,20 +30,18 @@ export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'so
     let visible = true
 
     const pointer = { x: width / 2, y: height / 2, active: false }
-
-    // Density is deliberately low: this is ambience, not a screensaver.
-    const count = width < 700 ? 18 : width < 1200 ? 30 : 42
+    const count = width < 700 ? 10 : width < 1200 ? 16 : 22
     const particles = Array.from({ length: count }, (_, index) => {
       const seed = (index * 9301 + 49297) % 233280
       const rand = seed / 233280
       return {
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.16,
-        vy: -0.06 - Math.random() * 0.16,
-        r: 0.6 + rand * 1.5,
-        alpha: 0.16 + rand * 0.34,
-        accent: rand > 0.72,
+        vx: (Math.random() - 0.5) * 0.1,
+        vy: -0.04 - Math.random() * 0.12,
+        r: 0.5 + rand * 1.1,
+        alpha: 0.1 + rand * 0.22,
+        accent: rand > 0.78,
       }
     })
 
@@ -68,8 +65,8 @@ export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'so
           const dx = particle.x - pointer.x
           const dy = particle.y - pointer.y
           const distance = Math.hypot(dx, dy)
-          if (distance < 160 && distance > 0.01) {
-            const push = (1 - distance / 160) * 0.32
+          if (distance < 140 && distance > 0.01) {
+            const push = (1 - distance / 140) * 0.22
             particle.x += (dx / distance) * push
             particle.y += (dy / distance) * push
           }
@@ -82,8 +79,8 @@ export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'so
         context.beginPath()
         context.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2)
         context.fillStyle = particle.accent
-          ? `rgba(167, 139, 250, ${particle.alpha})`
-          : `rgba(168, 188, 255, ${particle.alpha})`
+          ? `rgba(139, 92, 246, ${particle.alpha})`
+          : `rgba(109, 139, 255, ${particle.alpha})`
         context.fill()
       }
       if (visible) frame = requestAnimationFrame(draw)
@@ -107,14 +104,8 @@ export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'so
     resize()
     window.addEventListener('resize', resize, { passive: true })
     document.addEventListener('visibilitychange', onVisibility)
-    if (hasPointer && !reduced) window.addEventListener('pointermove', onPointerMove, { passive: true })
-
-    if (reduced) {
-      draw()
-      cancelAnimationFrame(frame)
-    } else {
-      frame = requestAnimationFrame(draw)
-    }
+    if (hasPointer) window.addEventListener('pointermove', onPointerMove, { passive: true })
+    frame = requestAnimationFrame(draw)
 
     return () => {
       cancelAnimationFrame(frame)
@@ -122,30 +113,29 @@ export function AmbientBackground({ variant = 'dark' }: { variant?: 'dark' | 'so
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pointermove', onPointerMove)
     }
-  }, [hasPointer, reduced])
+  }, [dark, hasPointer, reduced])
+
+  if (!dark) {
+    return (
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-white">
+        <div className={`ambient-wash ambient-wash-light ambient-wash-one${reduced ? ' ambient-static' : ''}`} />
+        <div className={`ambient-wash ambient-wash-light ambient-wash-two${reduced ? ' ambient-static' : ''}`} />
+        <div className="ambient-grain-light" />
+        <div className="ambient-grid-light" />
+      </div>
+    )
+  }
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-ink-950" />
-      <div
-        className="absolute -left-[18%] -top-[22%] h-[62vmax] w-[62vmax] rounded-full opacity-[0.5] blur-[120px] animate-drift"
-        style={{ background: 'radial-gradient(circle at 40% 40%, rgba(74,107,255,0.34), transparent 62%)' }}
-      />
-      <div
-        className="absolute -right-[16%] top-[8%] h-[52vmax] w-[52vmax] rounded-full opacity-[0.4] blur-[130px] animate-drift"
-        style={{ background: 'radial-gradient(circle at 60% 50%, rgba(139,92,246,0.3), transparent 64%)', animationDelay: '-9s' }}
-      />
-      {variant === 'soft' ? null : (
-        <div
-          className="absolute bottom-[-20%] left-[10%] h-[44vmax] w-[54vmax] rounded-full opacity-[0.28] blur-[140px] animate-drift"
-          style={{ background: 'radial-gradient(circle at 50% 50%, rgba(52,211,153,0.22), transparent 66%)', animationDelay: '-16s' }}
-        />
-      )}
-      <div className="absolute inset-0 grid-veil opacity-[0.5]" />
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0" style={{ background: 'var(--color-ink-950)' }} />
+      <div className={`ambient-wash ambient-wash-dark ambient-wash-one${reduced ? ' ambient-static' : ''}`} />
+      <div className={`ambient-wash ambient-wash-dark ambient-wash-two${reduced ? ' ambient-static' : ''}`} />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      <div className="ambient-grid-dark" />
       <div
         className="absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, transparent 30%, rgba(5,7,14,0.72) 88%)' }}
+        style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, transparent 30%, rgba(5,7,14,0.52) 88%)' }}
       />
     </div>
   )

@@ -10,12 +10,17 @@
  */
 import type { FreebuffUser } from '@freebuff/auth'
 import { createApp } from '../../worker/app.ts'
+import { readSessionUser } from '../../worker/lib/accounts.ts'
 import type { Env } from '../../worker/env.ts'
 
-const resolveUser = async (request: Request): Promise<FreebuffUser | null> => {
+/**
+ * Header identity for the simulation-loop tests; otherwise a real email/password
+ * session cookie, exactly as production resolves it.
+ */
+const resolveUser = async (request: Request, env: Env): Promise<FreebuffUser | null> => {
   const sub = request.headers.get('X-Test-User')
-  if (!sub) return null
-  return { sub, name: `Test ${sub}`, email: `${sub}@example.test`, email_verified: true }
+  if (sub) return { sub, name: `Test ${sub}`, email: `${sub}@example.test`, email_verified: true }
+  return readSessionUser(request, env)
 }
 
 const app = createApp(resolveUser)

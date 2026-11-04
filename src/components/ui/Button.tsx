@@ -100,3 +100,51 @@ export function IconButton({
     </button>
   )
 }
+
+export interface ButtonAnchorProps {
+  href: string
+  download?: string | boolean
+  target?: '_blank' | '_self'
+  rel?: string
+  variant?: Variant
+  size?: Size
+  icon?: ReactNode
+  magnetic?: boolean
+  fullWidth?: boolean
+  className?: string
+  children: ReactNode
+  'aria-label'?: string
+}
+
+/**
+ * Same visual language as Button, but a real anchor — for downloads and
+ * outbound links that must not go through the client router.
+ */
+export function ButtonAnchor({
+  href,
+  download,
+  target,
+  rel,
+  variant = 'primary',
+  size = 'md',
+  icon,
+  magnetic = false,
+  fullWidth,
+  className = '',
+  children,
+  ...rest
+}: ButtonAnchorProps) {
+  return (
+    <a
+      href={href}
+      {...(download !== undefined ? { download } : {})}
+      {...(target ? { target, rel: rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined) } : {})}
+      {...(magnetic ? { 'data-magnetic': 'true' } : {})}
+      className={`${base} ${VARIANTS[variant]} ${SIZES[size]} ${fullWidth ? 'w-full' : ''} ${magnetic ? 'magnetic' : ''} ${className}`}
+      {...rest}
+    >
+      {icon}
+      {children}
+    </a>
+  )
+}

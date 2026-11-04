@@ -13,11 +13,11 @@
  *   3. The API router handles `/api/*` (authenticated, user-scoped).
  *   4. Everything else falls through to the static assets (the SPA).
  */
-import { isSameOriginRequest } from '@freebuff/auth'
 import type { FreebuffUser } from '@freebuff/auth'
 import { Hono } from 'hono'
+import { accounts } from './routes/accounts.ts'
 import { api } from './routes/api.ts'
-import { AppError, errorResponse } from './lib/http.ts'
+import { AppError, errorResponse, isTrustedMutationOrigin } from './lib/http.ts'
 import type { Env, Vars } from './env.ts'
 
 export type UserResolver = (request: Request, env: Env) => Promise<FreebuffUser | null>
@@ -34,7 +34,7 @@ export function createApp(resolveUser: UserResolver): Hono<{ Bindings: Env; Vari
     // data, signed in or not (see @freebuff/auth isSameOriginRequest).
     const method = c.req.method.toUpperCase()
     if (method !== 'GET' && method !== 'HEAD' && c.req.path.startsWith('/api/')) {
-      if (!isSameOriginRequest(c.req.raw, c.env.APP_ORIGIN)) {
+      if (!isTrustedMutationOrigin(c.req.raw, c.env)) {
         return errorResponse(c, new AppError('forbidden', 'That request did not come from this site.', 403))
       }
     }
@@ -48,6 +48,9 @@ export function createApp(resolveUser: UserResolver): Hono<{ Bindings: Env; Vari
     return undefined
   })
 
+  // Email/password auth first: these endpoints are public by design and carry
+  // their own throttling, then everything else under /api requires a user.
+  app.route('/api/accounts', accounts)
   app.route('/api', api)
 
   app.notFound((c) => {

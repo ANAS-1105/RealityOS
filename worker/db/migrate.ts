@@ -12,7 +12,28 @@
  */
 import { SCHEMA_SQL } from './schema.generated.ts'
 
-export const SCHEMA_VERSION = '1'
+export const SCHEMA_VERSION = '2'
+
+/**
+ * Columns added after the first release. `CREATE TABLE IF NOT EXISTS` cannot add
+ * them to an existing table, so they are applied separately and a duplicate
+ * column (fresh database, or already migrated) is ignored.
+ */
+const COLUMN_MIGRATIONS = [
+  `ALTER TABLE users ADD COLUMN password_hash TEXT`,
+  `ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'freebuff'`,
+  `ALTER TABLE users ADD COLUMN email_edited INTEGER NOT NULL DEFAULT 0`,
+]
+
+async function addMissingColumns(db: D1Database): Promise<void> {
+  for (const statement of COLUMN_MIGRATIONS) {
+    try {
+      await db.prepare(statement).run()
+    } catch {
+      // The column already exists — nothing to do.
+    }
+  }
+}
 
 let applied: Promise<void> | null = null
 
@@ -38,6 +59,7 @@ async function apply(db: D1Database, requestId: string): Promise<void> {
     const batch = statements()
     // D1 batches run statements sequentially in one round trip.
     await db.batch(batch.map((statement) => db.prepare(statement)))
+    await addMissingColumns(db)
     await db
       .prepare(
         `INSERT INTO meta (key, value) VALUES ('schema_version', ?1)

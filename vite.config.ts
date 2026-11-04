@@ -32,6 +32,7 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     host: '0.0.0.0',
+    allowedHosts: process.env.VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS?.split(',').filter(Boolean),
     proxy: {
       '/api': { target: API_TARGET, changeOrigin: false },
       '/auth/freebuff': { target: API_TARGET, changeOrigin: false },

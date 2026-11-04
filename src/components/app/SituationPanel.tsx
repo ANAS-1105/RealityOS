@@ -1,5 +1,16 @@
 import { useState } from 'react'
-import { AlertCircle, CalendarDays, Check, Clock, Layers, ListChecks, Pencil, RefreshCw, Target, X } from 'lucide-react'
+import {
+  AlertCircle,
+  CalendarDays,
+  Check,
+  Clock,
+  Layers,
+  ListChecks,
+  Pencil,
+  RefreshCw,
+  Target,
+  X,
+} from 'lucide-react'
 import type { Resource, StructuredSituation } from '@/shared/types'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -8,11 +19,6 @@ import { InlineNote } from '@/components/ui/Feedback'
 import { ProgressBar } from '@/components/ui/Metric'
 import { formatDate, relativeDays } from '@/lib/format'
 
-/**
- * The Situation Analysis screen's centrepiece: exactly what the AI understood,
- * with the option to correct it. Editing is first-class because the whole product
- * depends on the model being right about your life.
- */
 export function SituationPanel({
   situation,
   onSave,
@@ -51,28 +57,34 @@ export function SituationPanel({
   const updateDeliverable = (index: number, patch: Partial<StructuredSituation['deliverables'][number]>) => {
     setDraft((current) => ({
       ...current,
-      deliverables: current.deliverables.map((item, position) => (position === index ? { ...item, ...patch } : item)),
+      deliverables: current.deliverables.map((item, position) =>
+        position === index ? { ...item, ...patch } : item,
+      ),
     }))
   }
 
   const updateResource = (index: number, patch: Partial<Resource>) => {
     setDraft((current) => ({
       ...current,
-      resources: current.resources.map((item, position) => (position === index ? { ...item, ...patch } : item)),
+      resources: current.resources.map((item, position) =>
+        position === index ? { ...item, ...patch } : item,
+      ),
     }))
   }
 
   return (
-    <div className="surface rounded-2xl">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-ink-800/70 px-5 py-4">
+    <div className="surface rounded-xl">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-ink-800/70 px-4 py-3.5">
         <div>
-          <h2 className="text-[0.95rem] font-semibold text-mist-50">Situation model</h2>
-          <p className="mt-1 text-[0.8rem] text-mist-500">
+          <h2 className="text-[0.9rem] font-semibold text-mist-50">Situation model</h2>
+          <p className="mt-1 text-[0.78rem] text-mist-500">
             {engineNote ?? 'Structured by the situation agent. Correct anything that looks wrong — the simulation depends on it.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone={situation.extractionConfidence > 0.75 ? 'low' : situation.extractionConfidence > 0.55 ? 'medium' : 'high'}>
+          <Badge
+            tone={situation.extractionConfidence > 0.75 ? 'low' : situation.extractionConfidence > 0.55 ? 'medium' : 'high'}
+          >
             {Math.round(situation.extractionConfidence * 100)}% extraction confidence
           </Badge>
           {editing ? (
@@ -93,25 +105,31 @@ export function SituationPanel({
       </header>
 
       {error ? (
-        <div className="px-5 pt-4">
+        <div className="px-4 pt-3.5">
           <InlineNote tone="warning">{error}</InlineNote>
         </div>
       ) : null}
 
-      <div className="grid gap-6 px-5 py-5 lg:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-5">
+      <div className="grid gap-5 px-4 py-4 lg:grid-cols-[1.3fr_1fr]">
+        <div className="space-y-4">
           {editing ? (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <Field label="Goal" htmlFor="situation-goal">
                 <Input id="situation-goal" value={draft.goal} onChange={(event) => setDraft({ ...draft, goal: event.target.value })} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Deadline" htmlFor="situation-deadline">
                   <Input
                     id="situation-deadline"
                     type="date"
                     value={draft.deadline ?? ''}
-                    onChange={(event) => setDraft({ ...draft, deadline: event.target.value || null, deadlineSource: event.target.value ? 'explicit' : 'unknown' })}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        deadline: event.target.value || null,
+                        deadlineSource: event.target.value ? 'explicit' : 'unknown',
+                      })
+                    }
                   />
                 </Field>
                 <Field label="Hours per day" htmlFor="situation-hours">
@@ -138,7 +156,7 @@ export function SituationPanel({
               </div>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Fact icon={<Target aria-hidden className="h-3.5 w-3.5" />} label="Goal" value={situation.goal} />
               <Fact
                 icon={<CalendarDays aria-hidden className="h-3.5 w-3.5" />}
@@ -159,11 +177,11 @@ export function SituationPanel({
           )}
 
           <div>
-            <p className="mb-2.5 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.14em] text-mist-500">
-              <ListChecks aria-hidden className="h-3.5 w-3.5" />
+            <p className="mb-2 text-[0.7rem] uppercase tracking-[0.14em] text-mist-500">
+              <ListChecks aria-hidden className="inline h-3.5 w-3.5" />
               Deliverables & dependencies
             </p>
-            <ul className="space-y-2.5">
+            <ul className="space-y-2">
               {(editing ? draft : situation).deliverables.map((deliverable, index) => (
                 <li key={deliverable.id} className="rounded-xl border border-ink-700/60 bg-ink-900/40 px-3.5 py-3">
                   {editing ? (
@@ -187,9 +205,12 @@ export function SituationPanel({
                       <button
                         type="button"
                         onClick={() =>
-                          setDraft((current) => ({ ...current, deliverables: current.deliverables.filter((_, position) => position !== index) }))
+                          setDraft((current) => ({
+                            ...current,
+                            deliverables: current.deliverables.filter((_, position) => position !== index),
+                          }))
                         }
-                        className="text-[0.75rem] text-mist-500 hover:text-signal-high"
+                        className="text-[0.74rem] text-mist-500 hover:text-signal-high"
                       >
                         Remove deliverable
                       </button>
@@ -197,21 +218,21 @@ export function SituationPanel({
                   ) : (
                     <>
                       <div className="flex items-start justify-between gap-3">
-                        <span className="text-[0.86rem] text-mist-100">{deliverable.name}</span>
-                        <span className="num shrink-0 text-[0.72rem] text-mist-500">
+                        <span className="text-[0.84rem] text-mist-100">{deliverable.name}</span>
+                        <span className="num shrink-0 text-[0.7rem] text-mist-500">
                           complexity {deliverable.complexity.toFixed(2)}
                           {deliverable.estimatedHours ? ` · ~${deliverable.estimatedHours}h` : ''}
                         </span>
                       </div>
                       {deliverable.dependencies.length ? (
-                        <p className="mt-1 text-[0.74rem] text-mist-500">
+                        <p className="mt-1 text-[0.72rem] text-mist-500">
                           waits on{' '}
                           {deliverable.dependencies
                             .map((id) => situation.deliverables.find((item) => item.id === id)?.name ?? id)
                             .join(', ')}
                         </p>
                       ) : (
-                        <p className="mt-1 text-[0.74rem] text-mist-500">no dependencies</p>
+                        <p className="mt-1 text-[0.72rem] text-mist-500">no dependencies</p>
                       )}
                     </>
                   )}
@@ -222,13 +243,18 @@ export function SituationPanel({
               <Button
                 size="sm"
                 variant="ghost"
-                className="mt-2.5"
+                className="mt-2"
                 onClick={() =>
                   setDraft((current) => ({
                     ...current,
                     deliverables: [
                       ...current.deliverables,
-                      { id: `d${current.deliverables.length + 1}-${Date.now().toString(36)}`, name: '', complexity: 0.5, dependencies: [] },
+                      {
+                        id: `d${current.deliverables.length + 1}-${Date.now().toString(36)}`,
+                        name: '',
+                        complexity: 0.5,
+                        dependencies: [],
+                      },
                     ],
                   }))
                 }
@@ -239,36 +265,45 @@ export function SituationPanel({
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div>
-            <p className="mb-2.5 text-[0.72rem] uppercase tracking-[0.14em] text-mist-500">Constraints</p>
+            <p className="mb-2 text-[0.7rem] uppercase tracking-[0.14em] text-mist-500">Constraints</p>
             {editing ? (
               <Field label="One constraint per line" htmlFor="situation-constraints">
                 <Textarea
                   id="situation-constraints"
                   rows={4}
                   value={draft.constraints.join('\n')}
-                  onChange={(event) => setDraft({ ...draft, constraints: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean) })}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      constraints: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean),
+                    })
+                  }
                 />
               </Field>
             ) : situation.constraints.length ? (
-              <ul className="space-y-1.5 text-[0.82rem] text-mist-300">
+              <ul className="space-y-1.5 text-[0.78rem] text-mist-300">
                 {situation.constraints.map((constraint) => (
                   <li key={constraint}>• {constraint}</li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[0.82rem] text-mist-500">None identified.</p>
+              <p className="text-[0.78rem] text-mist-500">None identified.</p>
             )}
           </div>
 
           <div>
-            <p className="mb-2.5 text-[0.72rem] uppercase tracking-[0.14em] text-mist-500">Resources</p>
+            <p className="mb-2 text-[0.7rem] uppercase tracking-[0.14em] text-mist-500">Resources</p>
             {editing ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {draft.resources.map((resource, index) => (
                   <div key={`${resource.name}-${index}`} className="grid grid-cols-[1.4fr_1fr_auto] gap-2">
-                    <Input aria-label="Resource name" value={resource.name} onChange={(event) => updateResource(index, { name: event.target.value })} />
+                    <Input
+                      aria-label="Resource name"
+                      value={resource.name}
+                      onChange={(event) => updateResource(index, { name: event.target.value })}
+                    />
                     <Select
                       aria-label="Resource availability"
                       value={resource.availability}
@@ -281,50 +316,53 @@ export function SituationPanel({
                     <button
                       type="button"
                       aria-label="Remove resource"
-                      onClick={() => setDraft((current) => ({ ...current, resources: current.resources.filter((_, position) => position !== index) }))}
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          resources: current.resources.filter((_, position) => position !== index),
+                        }))
+                      }
                       className="px-2 text-mist-500 hover:text-signal-high"
                     >
                       <X aria-hidden className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setDraft((current) => ({ ...current, resources: [...current.resources, { name: '', availability: 'medium' }] }))}
-                >
+                <Button size="sm" variant="ghost" onClick={() => setDraft((current) => ({ ...current, resources: [...current.resources, { name: '', availability: 'medium' }] }))}>
                   + Add resource
                 </Button>
               </div>
             ) : situation.resources.length ? (
               <ul className="space-y-2">
                 {situation.resources.map((resource) => (
-                  <li key={resource.name} className="flex items-center justify-between gap-2 text-[0.82rem]">
+                  <li key={resource.name} className="flex items-center justify-between gap-2 text-[0.78rem]">
                     <span className="text-mist-300">{resource.name}</span>
-                    <Badge tone={resource.availability === 'high' ? 'low' : resource.availability === 'medium' ? 'medium' : 'high'}>
+                    <Badge
+                      tone={resource.availability === 'high' ? 'low' : resource.availability === 'medium' ? 'medium' : 'high'}
+                    >
                       {resource.availability}
                     </Badge>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[0.82rem] text-mist-500">None stated — availability assumed adequate.</p>
+              <p className="text-[0.78rem] text-mist-500">None stated — availability assumed adequate.</p>
             )}
           </div>
 
           <div>
-            <p className="mb-2.5 text-[0.72rem] uppercase tracking-[0.14em] text-mist-500">Identified risks</p>
+            <p className="mb-2 text-[0.7rem] uppercase tracking-[0.14em] text-mist-500">Identified risks</p>
             <ul className="space-y-2">
               {situation.risks.map((risk) => (
                 <li key={risk.label} className="rounded-lg border border-ink-700/50 px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[0.82rem] text-mist-200">{risk.label}</span>
+                    <span className="text-[0.78rem] text-mist-200">{risk.label}</span>
                     <Badge tone={risk.severity}>{risk.severity}</Badge>
                   </div>
-                  <p className="mt-1 text-[0.74rem] leading-relaxed text-mist-500">{risk.rationale}</p>
+                  <p className="mt-1 text-[0.72rem] leading-relaxed text-mist-500">{risk.rationale}</p>
                 </li>
               ))}
-              {!situation.risks.length ? <li className="text-[0.82rem] text-mist-500">No specific risks identified yet.</li> : null}
+              {!situation.risks.length ? <li className="text-[0.78rem] text-mist-500">No specific risks identified yet.</li> : null}
             </ul>
           </div>
 
@@ -344,9 +382,7 @@ export function SituationPanel({
 
           {editing ? (
             <div className="flex justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
               <Button size="sm" onClick={save} loading={saving} icon={<RefreshCw aria-hidden className="h-3.5 w-3.5" />}>
                 Save changes
               </Button>
@@ -356,9 +392,9 @@ export function SituationPanel({
       </div>
 
       {!editing ? (
-        <div className="border-t border-ink-800/70 px-5 py-3">
+        <div className="border-t border-ink-800/70 px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="text-[0.72rem] uppercase tracking-[0.12em] text-mist-500">Model confidence</span>
+            <span className="text-[0.7rem] uppercase tracking-[0.12em] text-mist-500">Model confidence</span>
             <ProgressBar value={situation.extractionConfidence * 100} tone={situation.extractionConfidence > 0.75 ? 'low' : 'medium'} />
           </div>
         </div>
@@ -370,11 +406,11 @@ export function SituationPanel({
 function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-ink-700/60 bg-ink-900/40 px-3.5 py-3">
-      <p className="flex items-center gap-1.5 text-[0.7rem] uppercase tracking-[0.12em] text-mist-500">
+      <p className="flex items-center gap-1.5 text-[0.68rem] uppercase tracking-[0.12em] text-mist-500">
         {icon}
         {label}
       </p>
-      <p className="mt-1.5 text-[0.88rem] leading-snug text-mist-100">{value}</p>
+      <p className="mt-1.5 text-[0.84rem] leading-snug text-mist-100">{value}</p>
     </div>
   )
 }

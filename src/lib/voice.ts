@@ -40,15 +40,17 @@ export function useSpeechToText() {
   const finalRef = useRef('')
 
   const constructorRef = useRef<RecognitionConstructor | null>(null)
+  // Support is state, not a ref read: a ref write does not re-render, which left
+  // the microphone permanently disabled until some unrelated state changed.
+  const [supported, setSupported] = useState(false)
   useEffect(() => {
     const scope = window as unknown as {
       SpeechRecognition?: RecognitionConstructor
       webkitSpeechRecognition?: RecognitionConstructor
     }
     constructorRef.current = scope.SpeechRecognition ?? scope.webkitSpeechRecognition ?? null
+    setSupported(Boolean(constructorRef.current))
   }, [])
-
-  const supported = typeof window !== 'undefined' && Boolean(constructorRef.current)
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop()

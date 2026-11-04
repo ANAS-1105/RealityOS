@@ -21,6 +21,7 @@
  *   POST   /api/account/delete
  */
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { MODEL_CARD } from '../../src/shared/engine/ml.ts'
 import {
   chooseOptionSchema,
@@ -33,7 +34,8 @@ import {
 } from '../../src/shared/schemas.ts'
 import * as repo from '../db/repo.ts'
 import { ensureSchema } from '../db/migrate.ts'
-import { assertSameOrigin, enforceRateLimit, json, notFound, readJson, sseResponse, unauthorized } from '../lib/http.ts'
+import { clearSessionCookie } from '../lib/accounts.ts'
+import { AppError, assertSameOrigin, enforceRateLimit, json, notFound, readJson, sseResponse, unauthorized } from '../lib/http.ts'
 import * as simulations from '../services/simulations.ts'
 import { createAiProvider } from '../ai/provider.ts'
 import type { EngineInfo, StageEvent } from '../../src/shared/types.ts'
@@ -50,6 +52,8 @@ export const api = new Hono<{ Bindings: Env; Variables: Vars }>()
  */
 api.use('*', async (c, next) => {
   if (c.req.path === '/api/health') return next()
+  // /api/accounts/* is mounted separately and handles its own authentication.
+  if (c.req.path.startsWith('/api/accounts')) return next()
   const user = c.get('user')
   if (!user) throw unauthorized()
   // A fresh database initializes itself on first authenticated request.
@@ -77,10 +81,13 @@ api.get('/health', (c) =>
 api.get('/me', async (c) => {
   const user = c.get('user')!
   const profile = await repo.ensureUser(c.env.DB, user)
+  const account = await repo.getAccount(c.env.DB, user.sub)
   const learning = await simulations.learningSnapshot(c.env, user.sub)
   const counts = await repo.countSimulations(c.env.DB, user.sub)
   return json(c, {
     user: { sub: user.sub, name: user.name ?? null, email: user.email ?? null, picture: user.picture ?? null },
+    provider: account?.auth_provider === 'local' ? 'local' : 'freebuff',
+    hasPassword: Boolean(account?.password_hash),
     profile: {
       useCase: profile.use_case,
       decisionStyle: profile.decision_style,
@@ -251,7 +258,41 @@ api.post('/account/delete', async (c) => {
   await mutation(c, 'account-delete', 5)
   const user = c.get('user')!
   await repo.deleteAllUserData(c.env.DB, user.sub)
+  // The session row is gone with the account; clear the cookie so the browser
+  // does not keep presenting a token that can never resolve again.
+  c.header('Set-Cookie', clearSessionCookie(c.env))
   return json(c, { ok: true, deleted: true })
+})
+
+const profileUpdateSchema = z.object({
+  name: z.string().trim().min(2, 'Keep at least 2 characters.').max(80, 'That name is too long.').optional(),
+  email: z.email('Enter a valid email address.').max(254).optional(),
+})
+
+/**
+ * Name and email edits from Settings. The identity is `sub`, so changing the
+ * email never changes who the account is — it only changes what is displayed.
+ * `email_edited` stops a provider refresh from overwriting a chosen address.
+ */
+api.patch('/account/profile', async (c) => {
+  await mutation(c, 'profile-update', 30)
+  const user = c.get('user')!
+  const input = await readJson(c, profileUpdateSchema)
+  const email = input.email?.trim().toLowerCase()
+  if (input.name === undefined && email === undefined) {
+    throw new AppError('bad_request', 'Nothing to update.', 400)
+  }
+  if (email) {
+    const clash = await c.env.DB.prepare(`SELECT sub FROM users WHERE lower(email) = ?1 AND sub <> ?2`)
+      .bind(email, user.sub)
+      .first<{ sub: string }>()
+    if (clash) throw new AppError('email_taken', 'Another account already uses that email.', 409)
+  }
+  const account = await repo.updateAccount(c.env.DB, user.sub, { name: input.name, email })
+  return json(c, {
+    user: { sub: account.sub, name: account.name, email: account.email, picture: account.picture },
+    provider: account.auth_provider === 'local' ? 'local' : 'freebuff',
+  })
 })
 
 function engineSummary(env: Env) {

@@ -2,14 +2,19 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    RealityOS design tokens.
-   Deep navy / near-black surfaces, soft mist text, one electric accent plus a
-   restrained violet for the second engine. Accent colour is used for meaning
-   (primary action, recommendation, active state) rather than decoration.
+
+   Two palettes, switched by a class on <html>:
+     .light   → soft white surfaces, dark ink text, one electric accent.
+     (default / .dark) → deep navy / near-black surfaces, soft mist text.
+
+   The accent is used for meaning (primary action, recommendation, active state),
+   not decoration. Violet marks the second engine only.
    ───────────────────────────────────────────────────────────────────────────── */
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
 
+  /* Dark surfaces (default). */
   --color-ink-950: #05070e;
   --color-ink-925: #070a13;
   --color-ink-900: #0a0e1a;
@@ -53,59 +58,66 @@
   --animate-sweep: sweep 2.6s linear infinite;
 }
 
+/* Light-mode token overrides — applied when <html class="light"> (or the OS
+   prefers light). These keep the same semantic names so the rest of the UI does
+   not need to know which palette is active. */
+.light {
+  /* Clean, white-first palette: white page, near-white panels, dark ink text. */
+  --color-ink-950: #ffffff;
+  --color-ink-925: #fcfcfd;
+  --color-ink-900: #f7f8fa;
+  --color-ink-850: #ffffff;
+  --color-ink-800: #f2f3f6;
+  --color-ink-750: #e9ebf0;
+  --color-ink-700: #dde0e7;
+  --color-ink-600: #d3d7e0;
+  --color-ink-500: #a2a9b8;
+  --color-ink-400: #6f7787;
+
+  --color-mist-50: #0d1117;
+  --color-mist-100: #1b2230;
+  --color-mist-200: #2e3746;
+  --color-mist-300: #49525f;
+  --color-mist-400: #5f6875;
+  --color-mist-500: #7d8593;
+
+  --color-accent-300: #4a6bff;
+  --color-accent-400: #3552e8;
+  --color-accent-500: #2a41b8;
+  --color-accent-600: #233a9e;
+  --color-accent-700: #1c2f80;
+
+  --shadow-lift: 0 1px 2px rgb(13 17 23 / 0.04), 0 10px 30px -16px rgb(13 17 23 / 0.16);
+  --shadow-glow: 0 0 0 1px rgb(74 107 255 / 0.14), 0 16px 40px -22px rgb(74 107 255 / 0.35);
+}
+
 @keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
 }
 
 @keyframes fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(2%, -3%, 0) scale(1.06);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%       { transform: translate3d(2%, -3%, 0) scale(1.06); }
 }
 
 @keyframes pulse-soft {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
 }
 
 @keyframes sweep {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
 }
 
 @layer base {
-  * {
-    border-color: color-mix(in oklab, var(--color-ink-700) 70%, transparent);
-  }
+  * { border-color: color-mix(in oklab, var(--color-ink-600) 55%, transparent); }
 
   html {
     scroll-behavior: smooth;
@@ -115,7 +127,7 @@
   body {
     margin: 0;
     background-color: var(--color-ink-950);
-    color: var(--color-mist-100);
+    color: var(--color-mist-300);
     font-family: var(--font-sans);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
     -webkit-font-smoothing: antialiased;
@@ -123,21 +135,15 @@
     overflow-x: hidden;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
+  h1, h2, h3, h4 {
     letter-spacing: -0.022em;
     font-weight: 600;
     color: var(--color-mist-50);
     text-wrap: balance;
   }
 
-  p {
-    text-wrap: pretty;
-  }
+  p { text-wrap: pretty; }
 
-  /* Visible, consistent focus for keyboard users only. */
   :focus-visible {
     outline: 2px solid var(--color-accent-400);
     outline-offset: 2px;
@@ -148,43 +154,39 @@
     background: color-mix(in oklab, var(--color-accent-500) 40%, transparent);
   }
 
-  input,
-  textarea,
-  select,
-  button {
+  input, textarea, select, button {
     font: inherit;
     color: inherit;
   }
 
-  /* Charts and long lists scroll rather than break the layout on small screens. */
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--color-ink-600) 90%, transparent);
+    background: color-mix(in oklab, var(--color-ink-500) 90%, transparent);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in oklab, var(--color-ink-500) 90%, transparent);
+    background: color-mix(in oklab, var(--color-ink-400) 90%, transparent);
     background-clip: content-box;
   }
 }
 
 @layer utilities {
+  /* A surface that adapts to the active palette. */
   .surface {
     background:
-      linear-gradient(180deg, color-mix(in oklab, var(--color-ink-850) 92%, transparent), color-mix(in oklab, var(--color-ink-900) 96%, transparent));
-    border: 1px solid color-mix(in oklab, var(--color-ink-700) 78%, transparent);
+      linear-gradient(180deg,
+        color-mix(in oklab, var(--color-ink-850) 92%, transparent),
+        color-mix(in oklab, var(--color-ink-900) 96%, transparent));
+    border: 1px solid color-mix(in oklab, var(--color-ink-600) 78%, transparent);
   }
 
   .surface-raised {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--color-ink-800) 94%, transparent), color-mix(in oklab, var(--color-ink-900) 96%, transparent));
+    background: linear-gradient(180deg,
+      color-mix(in oklab, var(--color-ink-800) 94%, transparent),
+      color-mix(in oklab, var(--color-ink-900) 96%, transparent));
     border: 1px solid color-mix(in oklab, var(--color-ink-600) 60%, transparent);
     box-shadow: var(--shadow-lift);
   }
@@ -197,21 +199,35 @@
   }
 
   .hairline {
-    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--color-ink-600) 90%, transparent), transparent);
+    background: linear-gradient(90deg, transparent,
+      color-mix(in oklab, var(--color-ink-600) 90%, transparent), transparent);
     height: 1px;
   }
 
+  .light .surface {
+    background: #ffffff;
+    border-color: color-mix(in oklab, var(--color-ink-700) 85%, transparent);
+  }
+
+  .light .surface-raised {
+    background: #ffffff;
+    border-color: color-mix(in oklab, var(--color-ink-700) 80%, transparent);
+  }
+
+  .light .grid-veil { display: none; }
+
   .grid-veil {
     background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--color-ink-700) 34%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-700) 34%, transparent) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--color-ink-600) 34%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-ink-600) 34%, transparent) 1px, transparent 1px);
     background-size: 56px 56px;
     mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 78%);
   }
 
   .num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
+    font-weight: 500;
     letter-spacing: -0.01em;
   }
 
@@ -220,9 +236,7 @@
     will-change: transform;
   }
 
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -230,12 +244,54 @@
    dialled down to a still, readable interface.
    ───────────────────────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Subtle, slow-moving color light behind every page. Kept pointer-transparent,
+   low-contrast, and behind content so it never competes with controls or text. */
+.ambient-wash {
+  position: absolute;
+  width: min(72vw, 64rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  filter: blur(clamp(52px, 9vw, 128px));
+  will-change: transform;
+  animation: ambient-float 28s ease-in-out infinite alternate;
+}
+.ambient-wash-one { left: -22%; top: -52%; }
+.ambient-wash-two { right: -24%; top: 4%; animation-delay: -19s; animation-duration: 46s; }
+.ambient-wash-light.ambient-wash-one { background: radial-gradient(circle, rgb(93 130 255 / 19%), transparent 68%); }
+.ambient-wash-light.ambient-wash-two { background: radial-gradient(circle, rgb(155 126 255 / 16%), transparent 70%); }
+.ambient-wash-dark.ambient-wash-one { background: radial-gradient(circle, rgb(74 107 255 / 34%), transparent 68%); }
+.ambient-wash-dark.ambient-wash-two { background: radial-gradient(circle, rgb(139 92 246 / 30%), transparent 70%); }
+.ambient-grain-light {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image: radial-gradient(rgb(38 54 90 / 15%) 0.45px, transparent 0.45px);
+  background-size: 5px 5px;
+  mask-image: linear-gradient(to bottom, black, transparent 62%);
+}
+.ambient-static { animation: none; }
+@keyframes ambient-float {
+  0% { transform: translate3d(0, 0, 0) scale(0.96); }
+  100% { transform: translate3d(11vw, 9vh, 0) scale(1.15); }
+}
+.ambient-grid-light, .ambient-grid-dark {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image: linear-gradient(to right, rgb(109 139 255 / 14%) 1px, transparent 1px), linear-gradient(to bottom, rgb(109 139 255 / 14%) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse at 50% 24%, black 0%, transparent 74%);
+}
+.ambient-grid-dark { opacity: 0.24; }
+.ambient-grid-light { opacity: 0.10; }
+@media (prefers-reduced-motion: reduce) {
+  .ambient-wash { animation: none; }
 }

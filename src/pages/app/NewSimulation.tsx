@@ -7,7 +7,8 @@ import { ACCEPT_ATTRIBUTE } from '@/lib/documents'
 import { useAttachments } from '@/lib/useAttachments'
 import { useSpeechToText } from '@/lib/voice'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button, ButtonLink } from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
+import { ButtonLink } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Field, Input, SegmentedControl, Textarea } from '@/components/ui/Form'
@@ -20,7 +21,6 @@ const PLACEHOLDER = `I have an exam next Friday, a project due Monday, and three
 
 Include the messy details — classes, shifts, a slow laptop, the help you can and can't get. The more the model knows, the sharper the projection.`
 
-/** The create-simulation screen: text, voice, files, then analyse. */
 export default function NewSimulation() {
   const navigate = useNavigate()
   const { attachments, busy, add, remove, extractedChars } = useAttachments()
@@ -79,11 +79,11 @@ export default function NewSimulation() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto w-full max-w-none">
       <PageHeader
         eyebrow="New simulation"
         title="What decision are you facing?"
-        description="Describe the situation the way you'd explain it to a friend. RealityOS extracts the structure, shows you what it understood, then simulates the options."
+        description="Describe it the way you'd explain it to a friend."
         actions={
           <Button variant="ghost" size="sm" onClick={loadDemo} icon={<Sparkles aria-hidden className="h-3.5 w-3.5" />}>
             Use the demo scenario
@@ -92,18 +92,18 @@ export default function NewSimulation() {
       />
 
       {error ? (
-        <div className="mb-5">
+        <div className="mb-4">
           <ErrorState message={error.message} onRetry={submit} />
         </div>
       ) : null}
 
-      <Card className="p-5 sm:p-6">
+      <Card className="p-5">
         <Field
           label="Describe your situation"
           hint={`${combined.length.toLocaleString()} characters${extractedChars ? ` · ${extractedChars.toLocaleString()} from files` : ''} — minimum 20.`}
         >
           <Textarea
-            rows={9}
+            rows={8}
             value={description}
             placeholder={PLACEHOLDER}
             onChange={(event) => setDescription(event.target.value)}
@@ -111,7 +111,7 @@ export default function NewSimulation() {
           />
         </Field>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <Button
             variant={speech.listening ? 'danger' : 'secondary'}
             size="sm"
@@ -145,15 +145,15 @@ export default function NewSimulation() {
         </div>
 
         {speech.error ? (
-          <p className="mt-3 text-[0.78rem] text-signal-medium">{speech.error}</p>
+          <p className="mt-2.5 text-[0.78rem] text-signal-medium">{speech.error}</p>
         ) : !speech.supported ? (
-          <p className="mt-3 text-[0.78rem] text-mist-500">
+          <p className="mt-2.5 text-[0.78rem] text-mist-500">
             Speech recognition is not available in this browser, so the microphone is disabled rather than silently doing nothing.
           </p>
         ) : null}
 
         {speech.transcript ? (
-          <div className="mt-3 rounded-xl border border-ink-700/60 bg-ink-900/40 px-4 py-3">
+          <div className="mt-2.5 rounded-xl border border-ink-700/60 bg-ink-900/40 px-4 py-3">
             <p className="text-[0.7rem] uppercase tracking-[0.12em] text-mist-500">Transcribed</p>
             <p className="mt-1.5 text-[0.84rem] leading-relaxed text-mist-200">{speech.transcript}</p>
           </div>
@@ -170,11 +170,11 @@ export default function NewSimulation() {
             setDragging(false)
             void add(event.dataTransfer.files)
           }}
-          className={`mt-4 rounded-xl border border-dashed px-4 py-4 text-center transition-colors ${
+          className={`mt-3.5 rounded-xl border border-dashed px-4 py-3 text-center transition-colors ${
             dragging ? 'border-accent-400/60 bg-accent-500/6' : 'border-ink-600/70'
           }`}
         >
-          <p className="text-[0.82rem] text-mist-400">
+          <p className="text-[0.8rem] text-mist-400">
             Drop a PDF, DOCX, text file or screenshot here — or{' '}
             <button type="button" className="text-accent-300 underline-offset-2 hover:underline" onClick={() => fileInput.current?.click()}>
               browse
@@ -184,9 +184,9 @@ export default function NewSimulation() {
         </div>
 
         {attachments.length ? (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-2.5 space-y-2">
             {attachments.map((item) => (
-              <li key={item.name} className="flex items-start gap-3 rounded-xl border border-ink-700/60 bg-ink-900/40 px-3.5 py-2.5">
+              <li key={item.name} className="flex items-start gap-3 rounded-xl border border-ink-700/60 bg-ink-900/40 px-3 py-2.5">
                 {item.kind === 'image' ? (
                   <ImageIcon aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
                 ) : (
@@ -210,23 +210,23 @@ export default function NewSimulation() {
           type="button"
           onClick={() => setAdvanced((value) => !value)}
           aria-expanded={advanced}
-          className="mt-5 flex w-full items-center justify-between rounded-xl border border-ink-700/60 px-4 py-3 text-left text-[0.85rem] text-mist-200 transition-colors hover:border-ink-600"
+          className="mt-4 flex w-full items-center justify-between rounded-xl border border-ink-700/60 px-4 py-2.5 text-left text-[0.85rem] text-mist-200 transition-colors hover:border-ink-600"
         >
           <span>
             Optional details
-            <span className="ml-2 text-[0.78rem] text-mist-500">the AI infers what you leave out</span>
+            <span className="ml-2 text-[0.76rem] text-mist-500">the AI infers what you leave out</span>
           </span>
           <ChevronDown aria-hidden className={`h-4 w-4 transition-transform ${advanced ? 'rotate-180' : ''}`} />
         </button>
 
         {advanced ? (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-            <div className="mt-4 space-y-5">
+            <div className="mt-3 space-y-4">
               <Field label="Goal in one line" htmlFor="new-goal" optional hint="What has to be true when this is done?">
                 <Input id="new-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="Submit the final year project" />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Deadline" htmlFor="new-deadline" optional>
                   <Input id="new-deadline" type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
                 </Field>
@@ -316,8 +316,8 @@ export default function NewSimulation() {
           </motion.div>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-ink-800/70 pt-5">
-          <div className="flex items-center gap-2 text-[0.78rem] text-mist-500">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ink-800/70 pt-4">
+          <div className="flex items-center gap-2 text-[0.74rem] text-mist-500">
             <Badge tone="neutral">1 · Describe</Badge>
             <span aria-hidden>→</span>
             <Badge tone="neutral">2 · Model</Badge>
@@ -328,7 +328,7 @@ export default function NewSimulation() {
             <ButtonLink to="/app/dashboard" variant="ghost" size="md">
               Cancel
             </ButtonLink>
-            <Button size="lg" onClick={submit} loading={submitting} disabled={!enough} magnetic icon={<Wand2 aria-hidden className="h-4 w-4" />}>
+            <Button size="md" onClick={submit} loading={submitting} disabled={!enough} magnetic icon={<Wand2 aria-hidden className="h-4 w-4" />}>
               Analyze situation
             </Button>
           </div>
@@ -338,9 +338,7 @@ export default function NewSimulation() {
       <InlineNote>
         <p className="flex items-start gap-2">
           <Info aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            Nothing is final: after the analysis you can edit every extracted value, and the simulation re-runs against your corrections.
-          </span>
+          <span>Nothing is final: after the analysis you can edit every extracted value, and the simulation re-runs against your corrections.</span>
         </p>
       </InlineNote>
     </div>

@@ -5,14 +5,43 @@
 -- data to read or write.
 PRAGMA foreign_keys = ON;
 
+-- Accounts come from two places: Sign in with Freebuff (OIDC) and the email +
+-- password accounts this Worker owns. `sub` is the identity in both cases, so
+-- every owned row below works the same way whichever door was used.
 CREATE TABLE IF NOT EXISTS users (
-  sub        TEXT PRIMARY KEY,
-  email      TEXT,
-  name       TEXT,
-  picture    TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  sub            TEXT PRIMARY KEY,
+  email          TEXT,
+  name           TEXT,
+  picture        TEXT,
+  -- pbkdf2$iterations$salt$hash — NULL for provider-only accounts.
+  password_hash  TEXT,
+  auth_provider  TEXT NOT NULL DEFAULT 'freebuff',
+  -- 1 once the user edits their email here, so a provider refresh cannot undo it.
+  email_edited   INTEGER NOT NULL DEFAULT 0,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Email/password sessions. Only the SHA-256 of the token is stored, so the
+-- database alone can never be replayed as a signed-in user.
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash TEXT PRIMARY KEY,
+  sub        TEXT NOT NULL REFERENCES users(sub) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  user_agent TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_sub ON sessions(sub);
+
+-- One-time recovery codes for email accounts, also stored only as hashes.
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  code_hash  TEXT PRIMARY KEY,
+  sub        TEXT NOT NULL REFERENCES users(sub) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  used_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_sub ON recovery_codes(sub);
 
 CREATE TABLE IF NOT EXISTS profiles (
   sub            TEXT PRIMARY KEY REFERENCES users(sub) ON DELETE CASCADE,

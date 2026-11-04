@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
-import { SignInWithFreebuff } from '@freebuff/auth/react'
+import { Menu, X, Sun, Moon } from 'lucide-react'
 import { useScrollLock } from '@/lib/hooks'
 import { useSession } from '@/lib/session'
 import { ButtonLink, IconButton } from '@/components/ui/Button'
@@ -13,16 +12,24 @@ const PUBLIC_LINKS = [
   { label: 'About', to: '/about' },
 ]
 
-/** Marketing navigation. Authenticated visitors get a single path back to the app. */
 export function Navbar() {
   const [open, setOpen] = useState(false)
   const location = useLocation()
-  const { signedIn } = useSession()
+  const { signedIn, effectiveTheme, setTheme } = useSession()
   useScrollLock(open)
+
+  const ThemeToggle = () => (
+    <IconButton
+      label={`Switch to ${effectiveTheme === 'light' ? 'dark' : 'light'} theme`}
+      onClick={() => setTheme(effectiveTheme === 'light' ? 'dark' : 'light')}
+    >
+      {effectiveTheme === 'light' ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />}
+    </IconButton>
+  )
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink-800/70 bg-ink-950/72 backdrop-blur-xl">
-      <nav aria-label="Main" className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
+      <nav aria-label="Main" className="mx-auto flex h-15 w-full max-w-none items-center justify-between gap-4 px-5 sm:px-8 lg:px-10">
         <Logo to="/" />
 
         <ul className="hidden items-center gap-1 md:flex">
@@ -32,7 +39,9 @@ export function Navbar() {
                 to={link.to}
                 className={({ isActive }) =>
                   `rounded-lg px-3 py-2 text-[0.85rem] transition-colors ${
-                    isActive || (link.to === '/features' && location.pathname === '/') ? 'text-mist-50' : 'text-mist-400 hover:text-mist-100'
+                    isActive || (link.to === '/features' && location.pathname === '/')
+                      ? 'text-mist-50'
+                      : 'text-mist-400 hover:text-mist-100'
                   }`
                 }
               >
@@ -44,17 +53,17 @@ export function Navbar() {
 
         <div className="hidden items-center gap-2 md:flex">
           {signedIn ? (
-            <ButtonLink to="/app/dashboard" size="sm" magnetic>
-              Open dashboard
-            </ButtonLink>
+            <>
+              <ThemeToggle />
+              <ButtonLink to="/app/dashboard" size="sm" magnetic>Open dashboard</ButtonLink>
+            </>
           ) : (
             <>
+              <ThemeToggle />
               <Link to="/login" className="rounded-lg px-3 py-2 text-[0.85rem] text-mist-300 transition-colors hover:text-mist-50">
                 Log in
               </Link>
-              <ButtonLink to="/signup" size="sm" magnetic>
-                Get started
-              </ButtonLink>
+              <ButtonLink to="/signup" size="sm" magnetic>Get started</ButtonLink>
             </>
           )}
         </div>
@@ -86,20 +95,23 @@ export function Navbar() {
           </ul>
           <div className="mt-4 flex flex-col gap-2">
             {signedIn ? (
-              <ButtonLink to="/app/dashboard" fullWidth onClick={() => setOpen(false)}>
-                Open dashboard
-              </ButtonLink>
+              <>
+                <ButtonLink to="/app/dashboard" fullWidth onClick={() => setOpen(false)}>Open dashboard</ButtonLink>
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-ink-700/70 bg-ink-900/60 px-3 py-2.5 text-sm text-mist-200 hover:bg-ink-900/80"
+                  onClick={() => {
+                    setTheme(effectiveTheme === 'light' ? 'dark' : 'light')
+                    setOpen(false)
+                  }}
+                >
+                  {effectiveTheme === 'light' ? 'Switch to dark' : 'Switch to light'}
+                </button>
+              </>
             ) : (
               <>
-                <SignInWithFreebuff
-                  returnTo="/app/dashboard"
-                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-ink-600/70 bg-ink-800/80 text-sm font-medium text-mist-100"
-                >
-                  Sign in with Freebuff
-                </SignInWithFreebuff>
-                <ButtonLink to="/signup" fullWidth onClick={() => setOpen(false)}>
-                  Create your first simulation
-                </ButtonLink>
+                <ButtonLink to="/login" fullWidth onClick={() => setOpen(false)}>Sign in</ButtonLink>
+                <ButtonLink to="/signup" variant="secondary" fullWidth onClick={() => setOpen(false)}>Create account</ButtonLink>
               </>
             )}
           </div>

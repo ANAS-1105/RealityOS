@@ -20,3 +20,4 @@ coverage
 
 # local dev-server logs
 .logs/
+/freebuff-sites-build/
